@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sapho LinkedIn Assistant</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}">
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="eyebrow">Sapho Bio · Take-home assessment</p>
+        <h1>Sapho LinkedIn Assistant</h1>
+        <p class="sample-notice"><strong>SAMPLE DATA ONLY.</strong> All seeded people, companies, posts, dates, and engagement counts are fictional. LinkedIn URLs are illustrative placeholders, not real post links.</p>
+      </header>
+      {% block content %}{% endblock %}
+    </main>
+  </body>
+</html>

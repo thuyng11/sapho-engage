@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section aria-labelledby="queue-heading">
+  <h2 id="queue-heading">Post queue <span class="muted">({{ posts | length }})</span></h2>
+  <p class="muted">All posts · Newest first · Dates in UTC</p>
+  {% for post in posts %}
+  <article class="post" aria-labelledby="post-{{ post.id }}">
+    <h3 id="post-{{ post.id }}">{{ post.influencer.name }}</h3>
+    <p class="muted">{{ post.influencer.title }} · {{ post.influencer.company }}</p>
+    <p><time datetime="{{ post.posted_at.isoformat() }}Z">{{ post.posted_at.strftime('%b %d, %Y at %H:%M') }} UTC</time></p>
+    <p class="post-content">{{ post.content }}</p>
+    <dl class="post-meta">
+      <div><dt>Likes</dt><dd>{{ post.likes }}</dd></div>
+      <div><dt>Comments</dt><dd>{{ post.comments }}</dd></div>
+      <div><dt>Status</dt><dd>{{ post.status }}</dd></div>
+    </dl>
+    <p class="post-url">LinkedIn post URL: <a href="{{ post.post_url }}" target="_blank" rel="noopener noreferrer">{{ post.post_url }}</a></p>
+  </article>
+  {% else %}
+  <p class="post">No posts yet. Run <code>python -m scripts.seed_data</code> from the project directory, then refresh this page.</p>
+  {% endfor %}
+</section>
+{% endblock %}
