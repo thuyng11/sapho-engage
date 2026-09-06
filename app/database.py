@@ -33,7 +33,7 @@ class Base(DeclarativeBase):
 
 
 def init_db() -> None:
-    from app import models  # Register both tables before creating them.
+    from app import models  # Register all models before creating missing tables.
 
     Base.metadata.create_all(bind=engine)
 

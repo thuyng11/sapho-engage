@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -38,3 +38,26 @@ class Post(Base):
     status: Mapped[str] = mapped_column(String(50), default="new", server_default="new")
 
     influencer: Mapped[Influencer] = relationship(back_populates="posts")
+    generated_responses: Mapped[list[GeneratedResponse]] = relationship(back_populates="post")
+
+
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+class GeneratedResponse(Base):
+    __tablename__ = "generated_responses"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    post_id: Mapped[int] = mapped_column(ForeignKey("posts.id"), index=True)
+    goal: Mapped[str] = mapped_column(String(50))
+    tone: Mapped[str] = mapped_column(String(50))
+    length: Mapped[str] = mapped_column(String(50))
+    custom_instruction: Mapped[str | None] = mapped_column(Text)
+    generated_text: Mapped[str] = mapped_column(Text)
+    edited_text: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(50), default="draft", server_default="draft")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now, onupdate=utc_now)
+
+    post: Mapped[Post] = relationship(back_populates="generated_responses")
