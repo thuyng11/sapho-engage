@@ -16,3 +16,15 @@ a:focus-visible { outline: 2px solid #096578; outline-offset: 3px; }
 dt { color: #52616b; }
 dd { margin: 0; font-weight: 600; }
 .post-url { overflow-wrap: anywhere; font-size: 0.9rem; }
+.detail-page { max-width: 1200px; }
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+.detail-grid > section { min-width: 0; }
+.detail-grid h2:first-child { margin-top: 0; }
+label { display: block; margin: 16px 0 6px; font-weight: 600; }
+select, textarea { width: 100%; padding: 10px; border: 1px solid #8899a3; border-radius: 4px; background: #fff; color: inherit; font: inherit; }
+textarea { display: block; resize: vertical; margin-bottom: 16px; }
+button, .button { display: inline-block; padding: 10px 16px; border: 0; border-radius: 4px; background: #096578; color: #fff; font: inherit; text-decoration: none; cursor: pointer; }
+button:hover, .button:hover { background: #074b59; }
+button:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid #096578; outline-offset: 3px; }
+.confirmation { padding: 12px 16px; background: #e4f3e8; border: 1px solid #7da988; border-radius: 4px; }
+@media (max-width: 760px) { .detail-grid { grid-template-columns: 1fr; gap: 0; } }

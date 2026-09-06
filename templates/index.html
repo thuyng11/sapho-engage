@@ -16,6 +16,7 @@
       <div><dt>Status</dt><dd>{{ post.status }}</dd></div>
     </dl>
     <p class="post-url">LinkedIn post URL: <a href="{{ post.post_url }}" target="_blank" rel="noopener noreferrer">{{ post.post_url }}</a></p>
+    <a class="button" href="{{ url_for('post_detail', post_id=post.id) }}">Generate Response</a>
   </article>
   {% else %}
   <p class="post">No posts yet. Run <code>python -m scripts.seed_data</code> from the project directory, then refresh this page.</p>
