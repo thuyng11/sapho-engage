@@ -1,0 +1,29 @@
+[
+  {
+    "id": 1,
+    "name": "SAMPLE — Dr. Avery Chen",
+    "title": "Director of Translational Research",
+    "company": "SAMPLE Northstar Biosciences",
+    "linkedin_url": "https://www.linkedin.com/in/sample-fictional-avery-chen/",
+    "relevance_score": 0.95,
+    "notes": "Fictional SAMPLE persona for this assessment. Interested in reproducible laboratory workflows; not a real LinkedIn profile."
+  },
+  {
+    "id": 2,
+    "name": "SAMPLE — Jordan Patel",
+    "title": "Head of Laboratory Operations",
+    "company": "SAMPLE Cedar Cell Labs",
+    "linkedin_url": "https://www.linkedin.com/in/sample-fictional-jordan-patel/",
+    "relevance_score": 0.88,
+    "notes": "Fictional SAMPLE persona for this assessment. Interested in laboratory operations and sample tracking; not a real LinkedIn profile."
+  },
+  {
+    "id": 3,
+    "name": "SAMPLE — Dr. Morgan Rivera",
+    "title": "Biotechnology Research Lead",
+    "company": "SAMPLE Harbor Discovery",
+    "linkedin_url": "https://www.linkedin.com/in/sample-fictional-morgan-rivera/",
+    "relevance_score": 0.82,
+    "notes": "Fictional SAMPLE persona for this assessment. Interested in research collaboration and data quality; not a real LinkedIn profile."
+  }
+]

@@ -1,0 +1,62 @@
+[
+  {
+    "id": 1,
+    "influencer_id": 1,
+    "content": "SAMPLE POST — Fictional assessment content.\n\nOur imaginary research team is reviewing how we document experimental handoffs. A shared checklist could help us keep protocols consistent across projects.",
+    "post_url": "https://www.linkedin.com/posts/sample-fictional-post-001",
+    "posted_at": "2026-09-01T09:00:00Z",
+    "likes": 24,
+    "comments": 3,
+    "status": "new"
+  },
+  {
+    "id": 2,
+    "influencer_id": 2,
+    "content": "SAMPLE POST — Fictional assessment content.\n\nToday at our imaginary lab, we mapped the journey of a sample from intake to storage. Even a simple naming convention can make a workflow easier to follow.",
+    "post_url": "https://www.linkedin.com/posts/sample-fictional-post-002",
+    "posted_at": "2026-09-02T10:30:00Z",
+    "likes": 18,
+    "comments": 2,
+    "status": "new"
+  },
+  {
+    "id": 3,
+    "influencer_id": 3,
+    "content": "SAMPLE POST — Fictional assessment content.\n\nPlanning a mock research collaboration reminded us to agree on data definitions early. What should every project handoff include?",
+    "post_url": "https://www.linkedin.com/posts/sample-fictional-post-003",
+    "posted_at": "2026-09-03T14:15:00Z",
+    "likes": 31,
+    "comments": 5,
+    "status": "reviewed"
+  },
+  {
+    "id": 4,
+    "influencer_id": 1,
+    "content": "SAMPLE POST — Fictional assessment content.\n\nOur fictional team is setting aside time to compare protocol versions before the next study. Clear records make it easier to understand what changed and why.",
+    "post_url": "https://www.linkedin.com/posts/sample-fictional-post-004",
+    "posted_at": "2026-09-04T08:45:00Z",
+    "likes": 42,
+    "comments": 6,
+    "status": "new"
+  },
+  {
+    "id": 5,
+    "influencer_id": 2,
+    "content": "SAMPLE POST — Fictional assessment content.\n\nA mock onboarding exercise surfaced several unclear steps in our sample inventory process. We are rewriting the instructions with examples for new colleagues.",
+    "post_url": "https://www.linkedin.com/posts/sample-fictional-post-005",
+    "posted_at": "2026-09-05T12:00:00Z",
+    "likes": 0,
+    "comments": 0,
+    "status": "new"
+  },
+  {
+    "id": 6,
+    "influencer_id": 3,
+    "content": "SAMPLE POST — Fictional assessment content.\n\nFor our imaginary weekly research meeting, we are trying a short template: question, observation, uncertainty, and next step. The aim is to make discussions easier to follow.",
+    "post_url": "https://www.linkedin.com/posts/sample-fictional-post-006",
+    "posted_at": "2026-09-06T16:00:00Z",
+    "likes": 12,
+    "comments": 1,
+    "status": "reviewed"
+  }
+]
