@@ -1,6 +1,6 @@
 # Sapho LinkedIn Assistant
 
-Milestones 1–4B of a take-home assessment for Sapho Bio: a curated HTML post queue and editable Gemini-generated response drafts using FastAPI, Jinja2, SQLite, and SQLAlchemy 2.x.
+Milestones 1–5 of a take-home assessment for Sapho Bio: a curated HTML post queue and manual LinkedIn engagement workflow using FastAPI, Jinja2, SQLite, SQLAlchemy 2.x, and Gemini.
 
 **All 3 sample influencers and 6 sample posts are fictional.** Names, companies, content, dates, relevance scores, and engagement counts are invented. LinkedIn URLs are clearly named sample placeholders and do not identify real profiles or posts.
 
@@ -51,9 +51,11 @@ sapho-engage/
 ├── templates/
 │   ├── base.html
 │   ├── index.html
-│   └── post_detail.html
+│   ├── post_detail.html
+│   └── activity.html
 ├── static/
-│   └── styles.css
+│   ├── styles.css
+│   └── app.js
 ├── data/
 │   ├── influencers.json
 │   └── posts.json
@@ -69,7 +71,8 @@ sapho-engage/
 │   ├── test_workflow.py
 │   ├── test_llm_service.py
 │   ├── test_influencers.py
-│   └── test_posts.py
+│   ├── test_posts.py
+│   └── test_engagement.py
 ├── .env.example
 ├── .gitignore
 ├── requirements.txt
@@ -91,9 +94,20 @@ The implementation uses [SQLAlchemy 2.x typed models and selects](https://docs.s
 2. Submit the goal, tone, length, and optional custom instructions to `POST /posts/{post_id}/generate`. The backend validates the post and choices and calls `app/services/llm_service.py`. It sends the post, author context, selected settings, and optional instructions to Gemini. No API keys or internal prompt text are sent to the frontend.
 3. Successful generation creates a `GeneratedResponse` with status `draft`, original `generated_text`, an identical `edited_text`, and UTC creation/update timestamps. A 303 redirect returns to the detail page with that response selected. Refreshing the resulting page does not generate another record.
 4. Edit the textarea and select **Save Draft** to submit to `POST /responses/{response_id}/save`. Saving updates only the editable copy and update time, keeps status `draft`, and changes a `new` post to `drafted`. Other post statuses are preserved. The response and post updates commit together.
-5. A 303 redirect shows **Draft saved.** Existing drafts appear newest first, with their creation date, settings, stored text, and status. **Edit draft** reopens an older draft. The original generated text remains stored separately.
+5. **Regenerate** reuses the selected response's post, goal, tone, length, and custom instruction. A successful call creates a separate draft; a failed call leaves history unchanged.
+6. **Approve** saves the current textarea and changes both response and post to `approved`. Saving meaningful changes to approved text returns both to the draft stage so the changed text requires approval again.
+7. After approval, copy the current textarea through the browser Clipboard API, open the original post, comment manually, and select **Mark as Posted**. This changes both statuses to `posted`; it does not contact LinkedIn.
+8. Existing responses remain newest first in history. Server-side lifecycle events appear newest first at `/activity`.
 
 Generation stores a draft immediately. Textarea changes persist only after Save Draft; navigating away or generating another response before saving discards unsaved edits. Multiple generations create separate drafts. Drafts are never posted to LinkedIn.
+
+## Engagement workflow
+
+The response lifecycle is `draft` → `approved` → `posted`; the associated post moves from `new` to `drafted`, `approved`, and `posted`. Marking a response as posted requires approval. Posted responses are read-only in the page, and the application describes posting as manual tracking rather than verified publishing.
+
+Generation, regeneration, draft saves, approvals, and manual posted actions create lightweight `ActivityLog` rows. Clipboard use stays in the browser and is not persisted. The activity page shows timestamp, influencer, post topic or context, action, and response status. Existing drafts remain valid; the new activity table is created additively on startup.
+
+The main queue accepts `influencer`, `topic`, and `status` query parameters. Filter options come from the currently available curated dataset, or from demo data when fallback mode is active. Unknown values are ignored with visible feedback. Curated-only queue selection and newest-first ordering remain unchanged.
 
 Forms use FastAPI's standard [`Form` handling](https://fastapi.tiangolo.com/tutorial/request-forms/), which requires `python-multipart`. Nonexistent records return 404; malformed IDs, missing required form values, unsupported options, and blank saved text return 422. Validation errors use FastAPI's normal JSON error response. Generation failures return the detail page with HTTP 503, a concise error, and all submitted configuration fields preserved for retry. Existing drafts remain visible; no new row is inserted. There is no placeholder fallback.
 
@@ -164,6 +178,22 @@ uvicorn app.main:app --reload
 ```
 
 At http://127.0.0.1:8000/, confirm curated summaries appear newest first, demo posts are hidden, topics and source links are present, and missing engagement is not shown as zero. At http://127.0.0.1:8000/influencers, confirm the existing top-10 ranking remains intact. Open one curated post, generate with Gemini, edit and save the draft, then refresh and confirm it remains in history. Run `python -m scripts.import_posts` again and confirm the summary reports 29 skipped rows with no duplicates.
+
+## Manual engagement smoke test
+
+```bash
+cd /Users/minhthuynguyen/sapho-linkedin-assistant/sapho-engage
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python -m scripts.import_influencers
+python -m scripts.import_posts
+python -m unittest discover -s tests -v
+uvicorn app.main:app --reload
+```
+
+Open http://127.0.0.1:8000/ and filter to one influencer. Select a curated post, generate a response, edit it, and save the draft. Regenerate and confirm both versions remain in newest-first history. Approve one response, copy it, and open the original LinkedIn post in a new tab. After manually commenting, select **Mark as Posted** and confirm the queue shows `posted`.
+
+Open http://127.0.0.1:8000/activity and confirm the generated, saved, regenerated, approved, and marked-posted events appear newest first. Return to the queue, filter Status to Posted, and confirm the post appears. Restart Uvicorn and revisit the post and activity pages to verify that statuses, response history, and activity remain stored in SQLite.
 
 ## Manual Gemini smoke test
 
