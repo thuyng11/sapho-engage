@@ -6,6 +6,12 @@
     "company": "SAMPLE Northstar Biosciences",
     "linkedin_url": "https://www.linkedin.com/in/sample-fictional-avery-chen/",
     "relevance_score": 0.95,
+    "activity_score": 0,
+    "engagement_score": 0,
+    "credibility_score": 0,
+    "overall_score": 0,
+    "source_type": "sample",
+    "is_sample": true,
     "notes": "Fictional SAMPLE persona for this assessment. Interested in reproducible laboratory workflows; not a real LinkedIn profile."
   },
   {
@@ -15,6 +21,12 @@
     "company": "SAMPLE Cedar Cell Labs",
     "linkedin_url": "https://www.linkedin.com/in/sample-fictional-jordan-patel/",
     "relevance_score": 0.88,
+    "activity_score": 0,
+    "engagement_score": 0,
+    "credibility_score": 0,
+    "overall_score": 0,
+    "source_type": "sample",
+    "is_sample": true,
     "notes": "Fictional SAMPLE persona for this assessment. Interested in laboratory operations and sample tracking; not a real LinkedIn profile."
   },
   {
@@ -24,6 +36,12 @@
     "company": "SAMPLE Harbor Discovery",
     "linkedin_url": "https://www.linkedin.com/in/sample-fictional-morgan-rivera/",
     "relevance_score": 0.82,
+    "activity_score": 0,
+    "engagement_score": 0,
+    "credibility_score": 0,
+    "overall_score": 0,
+    "source_type": "sample",
+    "is_sample": true,
     "notes": "Fictional SAMPLE persona for this assessment. Interested in research collaboration and data quality; not a real LinkedIn profile."
   }
 ]

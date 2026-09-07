@@ -3,7 +3,7 @@ from collections.abc import Generator
 from pathlib import Path
 
 from dotenv import load_dotenv
-from sqlalchemy import URL, create_engine, event
+from sqlalchemy import URL, create_engine, event, inspect
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -36,6 +36,28 @@ def init_db() -> None:
     from app import models  # Register all models before creating missing tables.
 
     Base.metadata.create_all(bind=engine)
+    upgrade_influencer_table()
+
+
+def upgrade_influencer_table(database_engine=engine) -> None:
+    """Add Milestone 4 fields to an existing prototype SQLite database."""
+    if database_engine.dialect.name != "sqlite" or not inspect(database_engine).has_table("influencers"):
+        return
+    existing = {column["name"] for column in inspect(database_engine).get_columns("influencers")}
+    additions = {
+        "activity_score": "FLOAT NOT NULL DEFAULT 0",
+        "engagement_score": "FLOAT NOT NULL DEFAULT 0",
+        "credibility_score": "FLOAT NOT NULL DEFAULT 0",
+        "overall_score": "FLOAT NOT NULL DEFAULT 0",
+        "source_type": "VARCHAR(50) NOT NULL DEFAULT 'sample'",
+        "is_sample": "BOOLEAN NOT NULL DEFAULT 1",
+    }
+    with database_engine.begin() as connection:
+        for name, definition in additions.items():
+            if name not in existing:
+                connection.exec_driver_sql(
+                    f"ALTER TABLE influencers ADD COLUMN {name} {definition}"
+                )
 
 
 def get_db() -> Generator[Session, None, None]:

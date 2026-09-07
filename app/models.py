@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -17,7 +17,13 @@ class Influencer(Base):
     company: Mapped[str] = mapped_column(String(200))
     linkedin_url: Mapped[str] = mapped_column(String(500))
     relevance_score: Mapped[float] = mapped_column(Float)
+    activity_score: Mapped[float] = mapped_column(Float, default=0, server_default="0")
+    engagement_score: Mapped[float] = mapped_column(Float, default=0, server_default="0")
+    credibility_score: Mapped[float] = mapped_column(Float, default=0, server_default="0")
+    overall_score: Mapped[float] = mapped_column(Float, default=0, server_default="0")
     notes: Mapped[str] = mapped_column(Text)
+    source_type: Mapped[str] = mapped_column(String(50), default="sample", server_default="sample")
+    is_sample: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
 
     posts: Mapped[list[Post]] = relationship(back_populates="influencer")
 
