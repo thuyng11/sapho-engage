@@ -12,6 +12,9 @@
 {% block content %}
 <a href="{{ url_for('index') }}">← Back to post queue</a>
 {% if saved %}<p class="confirmation" role="status">Draft saved.</p>{% endif %}
+{% if regenerated %}<p class="confirmation" role="status">Response regenerated. The previous response remains in history.</p>{% endif %}
+{% if approved %}<p class="confirmation" role="status">Response approved.</p>{% endif %}
+{% if posted %}<p class="confirmation" role="status">Marked as posted. This records the manual workflow only.</p>{% endif %}
 <div class="detail-grid">
   <section class="post" aria-labelledby="original-heading">
     <h2 id="original-heading">{{ "Demo LinkedIn post" if post.is_sample else "Curated LinkedIn post" }}</h2>
@@ -53,23 +56,47 @@
 
     {% if active_response %}
     <h2 id="editor-heading">Edit response</h2>
-    <p class="muted">Draft #{{ active_response.id }} · {{ active_response.goal }} / {{ active_response.tone }} / {{ active_response.length }}</p>
+    <p class="muted">Response #{{ active_response.id }} · {{ active_response.goal }} / {{ active_response.tone }} / {{ active_response.length }} · <strong>{{ active_response.status | title }}</strong></p>
     <form method="post" action="{{ url_for('save_response', response_id=active_response.id) }}" aria-labelledby="editor-heading">
       <label for="edited-text">Response text</label>
-      <textarea id="edited-text" name="edited_text" rows="12" required>{{ active_response.edited_text if active_response.edited_text is not none else active_response.generated_text }}</textarea>
-      <p class="muted">Changes are stored when you select Save Draft.</p>
-      <button type="submit">Save Draft</button>
+      <textarea id="edited-text" name="edited_text" rows="12" required {% if active_response.status == "posted" %}readonly{% endif %}>{{ active_response.edited_text if active_response.edited_text is not none else active_response.generated_text }}</textarea>
+      {% if active_response.status == "draft" %}
+      <p class="muted">Changes are stored when you select Save Draft. Approval saves the current text first.</p>
+      <div class="response-actions">
+        <button type="submit">Save Draft</button>
+        <button type="submit" formaction="{{ url_for('regenerate_response', response_id=active_response.id) }}" formnovalidate>Regenerate</button>
+        <button type="submit" formaction="{{ url_for('approve_response', response_id=active_response.id) }}">Approve</button>
+        <button type="button" class="secondary-button copy-response" data-copy-target="edited-text">Copy Response</button>
+        <span class="copy-feedback" role="status" aria-live="polite"></span>
+      </div>
+      {% elif active_response.status == "approved" %}
+      <p class="muted">Saving changed approved text returns this response to Draft for review.</p>
+      <div class="response-actions">
+        <button type="submit">Save Changes</button>
+        <button type="button" class="secondary-button copy-response" data-copy-target="edited-text">Copy Response</button>
+        <a class="button secondary-button" href="{{ post.post_url }}" target="_blank" rel="noopener noreferrer">Open LinkedIn</a>
+        <button type="submit" formaction="{{ url_for('mark_response_posted', response_id=active_response.id) }}" formnovalidate>Mark as Posted</button>
+        <span class="copy-feedback" role="status" aria-live="polite"></span>
+      </div>
+      {% else %}
+      <p class="posted-status"><strong>Posted</strong> · Recorded manually; the application did not publish this response.</p>
+      <div class="response-actions">
+        <button type="button" class="secondary-button copy-response" data-copy-target="edited-text">Copy Response</button>
+        <a class="button secondary-button" href="{{ post.post_url }}" target="_blank" rel="noopener noreferrer">Open LinkedIn</a>
+        <span class="copy-feedback" role="status" aria-live="polite"></span>
+      </div>
+      {% endif %}
     </form>
     {% endif %}
   </section>
 </div>
 
 <section aria-labelledby="drafts-heading">
-  <h2 id="drafts-heading">Existing drafts ({{ drafts | length }})</h2>
-  <p class="muted">Newest first. Generated responses are stored immediately; edits require Save Draft.</p>
+  <h2 id="drafts-heading">Response history ({{ drafts | length }})</h2>
+  <p class="muted">Newest first. Each generation is retained with its current lifecycle status.</p>
   {% for draft in drafts %}
   <article class="post" id="draft-{{ draft.id }}">
-    <h3>Draft #{{ draft.id }}</h3>
+    <h3>Response #{{ draft.id }} {% if active_response and draft.id == active_response.id %}<span class="badge">Active</span>{% endif %}</h3>
     <p><time datetime="{{ draft.created_at.isoformat() }}Z">{{ draft.created_at.strftime('%b %d, %Y at %H:%M') }} UTC</time></p>
     <p>{{ draft.goal }} · {{ draft.tone }} · {{ draft.length }} · Status: {{ draft.status }}</p>
     <p class="post-content">{{ draft.edited_text if draft.edited_text is not none else draft.generated_text }}</p>
