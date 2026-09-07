@@ -30,13 +30,28 @@ templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request, db: Annotated[Session, Depends(get_db)]):
-    posts = db.scalars(
+    curated_query = (
         select(Post)
         .options(joinedload(Post.influencer))
+        .where(
+            Post.is_sample.is_(False),
+            Post.source_type == "manual_research",
+        )
         .order_by(Post.posted_at.desc(), Post.id.desc())
-    ).all()
+    )
+    posts = db.scalars(curated_query).all()
+    using_curated = bool(posts)
+    if not using_curated:
+        posts = db.scalars(
+            select(Post)
+            .options(joinedload(Post.influencer))
+            .where(Post.is_sample.is_(True))
+            .order_by(Post.posted_at.desc(), Post.id.desc())
+        ).all()
     return templates.TemplateResponse(
-        request=request, name="index.html", context={"posts": posts}
+        request=request,
+        name="index.html",
+        context={"posts": posts, "using_curated": using_curated},
     )
 
 

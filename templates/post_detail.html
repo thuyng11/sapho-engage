@@ -1,19 +1,29 @@
 {% extends "base.html" %}
 {% block main_class %}detail-page{% endblock %}
 
+{% block data_notice %}
+  {% if post.is_sample %}
+  {{ super() }}
+  {% else %}
+  <p class="curated-notice">This page uses a manually researched summary. Review the original LinkedIn post before using a response.</p>
+  {% endif %}
+{% endblock %}
+
 {% block content %}
 <a href="{{ url_for('index') }}">← Back to post queue</a>
 {% if saved %}<p class="confirmation" role="status">Draft saved.</p>{% endif %}
 <div class="detail-grid">
   <section class="post" aria-labelledby="original-heading">
-    <h2 id="original-heading">Original LinkedIn post</h2>
-    <h3>{{ post.influencer.name }}</h3>
+    <h2 id="original-heading">{{ "Demo LinkedIn post" if post.is_sample else "Curated LinkedIn post" }}</h2>
+    <h3>{{ post.influencer.name }} <span class="badge {{ 'demo-badge' if post.is_sample else '' }}">{{ "Demo" if post.is_sample else "Curated" }}</span></h3>
     <p class="muted">{{ post.influencer.title }} · {{ post.influencer.company }}</p>
     <p><time datetime="{{ post.posted_at.isoformat() }}Z">{{ post.posted_at.strftime('%b %d, %Y at %H:%M') }} UTC</time></p>
+    {% if post.topic %}<p><strong>Topic:</strong> {{ post.topic }}</p>{% endif %}
+    <p class="content-label">{{ "Demo post" if post.is_sample else "Research summary" }}</p>
     <p class="post-content">{{ post.content }}</p>
     <dl class="post-meta">
-      <div><dt>Likes</dt><dd>{{ post.likes }}</dd></div>
-      <div><dt>Comments</dt><dd>{{ post.comments }}</dd></div>
+      <div><dt>Reactions</dt><dd>{{ post.likes if post.likes is not none else "—" }}</dd></div>
+      <div><dt>Comments</dt><dd>{{ post.comments if post.comments is not none else "—" }}</dd></div>
       <div><dt>Status</dt><dd>{{ post.status }}</dd></div>
     </dl>
     <p class="post-url">LinkedIn post URL: <a href="{{ post.post_url }}" target="_blank" rel="noopener noreferrer">{{ post.post_url }}</a></p>
