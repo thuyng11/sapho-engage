@@ -7,6 +7,11 @@
     "posted_at": "2026-09-01T09:00:00Z",
     "likes": 24,
     "comments": 3,
+    "topic": "Sample research workflows",
+    "content_type": "sample",
+    "source_type": "sample",
+    "is_sample": true,
+    "verification_status": "sample",
     "status": "new"
   },
   {
@@ -17,6 +22,11 @@
     "posted_at": "2026-09-02T10:30:00Z",
     "likes": 18,
     "comments": 2,
+    "topic": "Sample laboratory operations",
+    "content_type": "sample",
+    "source_type": "sample",
+    "is_sample": true,
+    "verification_status": "sample",
     "status": "new"
   },
   {
@@ -27,6 +37,11 @@
     "posted_at": "2026-09-03T14:15:00Z",
     "likes": 31,
     "comments": 5,
+    "topic": "Sample research collaboration",
+    "content_type": "sample",
+    "source_type": "sample",
+    "is_sample": true,
+    "verification_status": "sample",
     "status": "reviewed"
   },
   {
@@ -37,6 +52,11 @@
     "posted_at": "2026-09-04T08:45:00Z",
     "likes": 42,
     "comments": 6,
+    "topic": "Sample protocol records",
+    "content_type": "sample",
+    "source_type": "sample",
+    "is_sample": true,
+    "verification_status": "sample",
     "status": "new"
   },
   {
@@ -47,6 +67,11 @@
     "posted_at": "2026-09-05T12:00:00Z",
     "likes": 0,
     "comments": 0,
+    "topic": "Sample inventory process",
+    "content_type": "sample",
+    "source_type": "sample",
+    "is_sample": true,
+    "verification_status": "sample",
     "status": "new"
   },
   {
@@ -57,6 +82,11 @@
     "posted_at": "2026-09-06T16:00:00Z",
     "likes": 12,
     "comments": 1,
+    "topic": "Sample research meetings",
+    "content_type": "sample",
+    "source_type": "sample",
+    "is_sample": true,
+    "verification_status": "sample",
     "status": "reviewed"
   }
 ]

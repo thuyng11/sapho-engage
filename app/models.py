@@ -39,9 +39,23 @@ class Post(Base):
     post_url: Mapped[str] = mapped_column(String(500))
     # Store UTC without an offset because SQLite does not preserve time zones.
     posted_at: Mapped[datetime] = mapped_column(DateTime)
-    likes: Mapped[int] = mapped_column(Integer)
-    comments: Mapped[int] = mapped_column(Integer)
+    likes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    comments: Mapped[int | None] = mapped_column(Integer, nullable=True)
     status: Mapped[str] = mapped_column(String(50), default="new", server_default="new")
+    topic: Mapped[str] = mapped_column(String(200), default="", server_default="")
+    content_type: Mapped[str] = mapped_column(
+        String(50), default="sample", server_default="sample"
+    )
+    collected_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    source_type: Mapped[str] = mapped_column(
+        String(50), default="sample", server_default="sample"
+    )
+    is_sample: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
+    verification_status: Mapped[str] = mapped_column(
+        String(50), default="sample", server_default="sample"
+    )
+    source_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    engagement_note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     influencer: Mapped[Influencer] = relationship(back_populates="posts")
     generated_responses: Mapped[list[GeneratedResponse]] = relationship(back_populates="post")
