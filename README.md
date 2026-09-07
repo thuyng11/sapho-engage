@@ -1,10 +1,8 @@
 # Sapho LinkedIn Engagement Assistant
 
-Milestones 1–6B of a take-home assessment for Sapho Bio: a curated HTML post queue and manual LinkedIn engagement workflow using FastAPI, Jinja2, SQLite, SQLAlchemy 2.x, and Gemini.
+A lightweight FastAPI web app built to curate relevant LinkedIn posts from compounding-pharmacy industry voices and helps generate, review, and track brand-aligned responses using Gemini.
 
-**All 3 sample influencers and 6 sample posts are fictional.** Names, companies, content, dates, relevance scores, and engagement counts are invented. LinkedIn URLs are clearly named sample placeholders and do not identify real profiles or posts.
-
-The normal generation workflow uses the official Google Gen AI Python SDK and Gemini generate-content API. Existing sample posts and older demo drafts are preserved. There is no scraping, authentication, or automatic LinkedIn posting.
+Built with FastAPI, Jinja2, SQLite, SQLAlchemy, and the Google Gen AI SDK. The app uses manually researched public data and does not scrape LinkedIn or post automatically.
 
 ## Local setup
 
