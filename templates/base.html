@@ -3,19 +3,19 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Sapho LinkedIn Assistant</title>
+    <title>{% block title %}Sapho LinkedIn Engagement Assistant{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}">
     <script src="{{ url_for('static', path='/app.js') }}" defer></script>
   </head>
   <body>
     <main class="{% block main_class %}{% endblock %}">
-      <header>
-        <p class="eyebrow">Sapho Bio · Take-home assessment</p>
-        <h1>Sapho LinkedIn Assistant</h1>
+      <header class="site-header">
+        <p class="eyebrow">Sapho Bio · LinkedIn engagement workflow</p>
+        <h1>Sapho LinkedIn Engagement Assistant</h1>
         <nav aria-label="Primary">
-          <a href="{{ url_for('index') }}">Post Queue</a>
-          <a href="{{ url_for('influencers') }}">Influencers</a>
-          <a href="{{ url_for('activity') }}">Activity</a>
+          <a href="{{ url_for('index') }}" {% if request.url.path == '/' or request.url.path.startswith('/posts/') %}class="active" aria-current="page"{% endif %}>Posts</a>
+          <a href="{{ url_for('influencers') }}" {% if request.url.path == '/influencers' %}class="active" aria-current="page"{% endif %}>Influencers</a>
+          <a href="{{ url_for('activity') }}" {% if request.url.path == '/activity' %}class="active" aria-current="page"{% endif %}>Activity</a>
         </nav>
         {% block data_notice %}<p class="sample-notice"><strong>SAMPLE DATA ONLY.</strong> All seeded people, companies, posts, dates, and engagement counts are fictional. LinkedIn URLs are illustrative placeholders, not real post links.</p>{% endblock %}
       </header>

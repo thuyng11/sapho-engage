@@ -10,8 +10,23 @@
 
 {% block content %}
 <section aria-labelledby="queue-heading">
-  <h2 id="queue-heading">Post queue <span class="muted">({{ posts | length }})</span></h2>
-  <p class="muted">{{ "Curated posts" if using_curated else "Demo posts" }} · Newest first · Dates in UTC</p>
+  <div class="page-intro">
+    <p class="eyebrow">Engagement workspace</p>
+    <h2 id="queue-heading">Relevant LinkedIn conversations</h2>
+    <p class="intro-copy">Discover relevant compounding-pharmacy conversations and generate brand-aligned responses for Sapho Bio.</p>
+    {% if using_curated %}
+    <div class="summary-counts" aria-label="Curated dataset summary">
+      <span><strong>{{ available_post_count }}</strong> curated posts</span>
+      <span><strong>{{ curated_influencer_count }}</strong> curated influencers</span>
+    </div>
+    {% else %}
+    <p class="muted">Demo fallback data · Newest first · Dates in UTC</p>
+    {% endif %}
+  </div>
+  <div class="section-heading">
+    <h2>Post queue <span class="muted">({{ posts | length }} shown)</span></h2>
+    <span class="muted">Newest first · Dates in UTC</span>
+  </div>
   <form class="queue-filters" method="get" action="{{ url_for('index') }}">
     <div>
       <label for="influencer">Influencer</label>
@@ -41,13 +56,18 @@
       </select>
     </div>
     <button type="submit">Apply Filters</button>
-    <a href="{{ url_for('index') }}">Clear</a>
+    <a class="clear-link" href="{{ url_for('index') }}">Clear</a>
   </form>
   {% for error in filter_errors %}<p class="filter-error" role="alert">{{ error }}</p>{% endfor %}
   {% for post in posts %}
   <article class="post" aria-labelledby="post-{{ post.id }}">
-    <h3 id="post-{{ post.id }}">{{ post.influencer.name }} <span class="badge {{ 'demo-badge' if post.is_sample else '' }}">{{ "Demo" if post.is_sample else "Curated" }}</span></h3>
-    <p class="muted">{{ post.influencer.title }} · {{ post.influencer.company }}</p>
+    <div class="card-heading">
+      <div>
+        <h3 id="post-{{ post.id }}">{{ post.influencer.name }}</h3>
+        <p class="muted">{{ post.influencer.title }} · {{ post.influencer.company }}</p>
+      </div>
+      <span class="source-badge {{ 'source-demo' if post.is_sample else 'source-curated' }}">{{ "Demo" if post.is_sample else "Curated" }}</span>
+    </div>
     <p><time datetime="{{ post.posted_at.isoformat() }}Z">{{ post.posted_at.strftime('%b %d, %Y at %H:%M') }} UTC</time></p>
     {% if post.topic %}<p><strong>Topic:</strong> {{ post.topic }}</p>{% endif %}
     <p class="content-label">{{ "Demo post" if post.is_sample else "Research summary" }}</p>
@@ -55,13 +75,23 @@
     <dl class="post-meta">
       <div><dt>Reactions</dt><dd>{{ post.likes if post.likes is not none else "—" }}</dd></div>
       <div><dt>Comments</dt><dd>{{ post.comments if post.comments is not none else "—" }}</dd></div>
-      <div><dt>Status</dt><dd>{{ post.status }}</dd></div>
+      <div><dt>Status</dt><dd><span class="status-badge status-{{ post.status }}">{{ post.status | title }}</span></dd></div>
     </dl>
-    <p class="post-url">LinkedIn post URL: <a href="{{ post.post_url }}" target="_blank" rel="noopener noreferrer">{{ post.post_url }}</a></p>
+    <p class="post-url"><a href="{{ post.post_url }}" target="_blank" rel="noopener noreferrer">View Original on LinkedIn ↗</a></p>
     <a class="button" href="{{ url_for('post_detail', post_id=post.id) }}">Generate Response</a>
   </article>
   {% else %}
-  <p class="post">No posts match the current filters. Clear the filters or import post data if the queue is empty.</p>
+    {% if available_post_count == 0 %}
+    <div class="empty-state">
+      <h3>No posts available</h3>
+      <p>Import curated posts with <code>python -m scripts.import_posts</code>, or seed demo data for fallback mode.</p>
+    </div>
+    {% elif has_active_filters %}
+    <div class="empty-state">
+      <h3>No posts match these filters</h3>
+      <p>Try adjusting the influencer, topic, or status.</p>
+    </div>
+    {% endif %}
   {% endfor %}
 </section>
 {% endblock %}

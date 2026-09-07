@@ -5,7 +5,7 @@ from fastapi import Depends, FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import BASE_DIR, get_db, init_db
@@ -70,6 +70,16 @@ def index(
     topic_options = sorted(
         {post.topic for post in available_posts if post.topic}, key=str.lower
     )
+    curated_influencer_count = 0
+    if using_curated:
+        curated_influencer_count = db.scalar(
+            select(func.count())
+            .select_from(Influencer)
+            .where(
+                Influencer.is_sample.is_(False),
+                Influencer.source_type == "manual_research",
+            )
+        ) or 0
     filter_errors: list[str] = []
     selected_influencer: int | None = None
     if influencer:
@@ -107,6 +117,11 @@ def index(
             "selected_topic": selected_topic,
             "selected_status": selected_status,
             "filter_errors": filter_errors,
+            "available_post_count": len(available_posts),
+            "curated_influencer_count": curated_influencer_count,
+            "has_active_filters": any(
+                (selected_influencer, selected_topic, selected_status)
+            ),
         },
     )
 
