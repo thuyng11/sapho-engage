@@ -206,6 +206,9 @@ class CuratedPostTests(unittest.TestCase):
             self.assertEqual(queue.text.count('<article class="post"'), 2)
             self.assertIn("Curated", queue.text)
             self.assertIn("Research summary", queue.text)
+            self.assertIn("<strong>2</strong> curated posts", queue.text)
+            self.assertIn("<strong>1</strong> curated influencers", queue.text)
+            self.assertIn('aria-current="page">Posts</a>', queue.text)
             self.assertIn("Newest curated summary", queue.text)
             self.assertNotIn("SAMPLE —", queue.text)
             self.assertNotIn(">0</dd>", queue.text)
@@ -221,6 +224,8 @@ class CuratedPostTests(unittest.TestCase):
             self.assertEqual(detail.status_code, 200)
             self.assertIn("Curated LinkedIn post", detail.text)
             self.assertIn("Research summary", detail.text)
+            self.assertIn('target="_blank" rel="noopener noreferrer">View Original', detail.text)
+            self.assertIn('data-loading-label="Generating..."', detail.text)
             generated = client.post(
                 f"/posts/{post_id}/generate",
                 data={

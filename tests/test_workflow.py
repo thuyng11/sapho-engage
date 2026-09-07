@@ -78,7 +78,7 @@ class WorkflowTests(unittest.TestCase):
     def test_detail_information_and_defaults(self):
         page = self.client.get("/posts/1")
         self.assertEqual(page.status_code, 200)
-        self.assertIn('No drafts yet.', page.text)
+        self.assertIn('No previous responses for this post.', page.text)
         for value in self.form.values():
             self.assertIn(f'value="{value}" selected', page.text)
         with self.sessions() as db:
@@ -134,7 +134,7 @@ class WorkflowTests(unittest.TestCase):
             self.assertEqual(response.status, "draft")
             self.assertEqual(response.post.status, "drafted")
             self.assertGreater(response.updated_at, previous_updated_at)
-        self.assertIn('<dd>drafted</dd>', self.client.get('/').text)
+        self.assertIn('status-drafted">Drafted</span>', self.client.get('/').text)
         self.assertIn('My edited draft.', self.client.get('/posts/1').text)
 
     def test_save_preserves_other_post_statuses(self):
@@ -152,7 +152,7 @@ class WorkflowTests(unittest.TestCase):
         older = self.client.get(f"/posts/1?response_id={first_id}")
         self.assertIn(f'/responses/{first_id}/save', older.text)
         self.assertEqual(self.client.get(f"/posts/2?response_id={first_id}").status_code, 404)
-        self.assertIn('No drafts yet.', self.client.get('/posts/2').text)
+        self.assertIn('No previous responses for this post.', self.client.get('/posts/2').text)
 
     def test_invalid_ids(self):
         for value, status in ((9999, 404), (-1, 404), ('invalid', 422)):

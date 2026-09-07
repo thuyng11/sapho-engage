@@ -196,8 +196,17 @@ class EngagementWorkflowTests(unittest.TestCase):
         script = self.client.get("/static/app.js")
         self.assertEqual(script.status_code, 200)
         self.assertIn("navigator.clipboard.writeText(textarea.value)", script.text)
+        self.assertIn('button.textContent = "Copied ✓"', script.text)
+        self.assertIn('button.disabled = true', script.text)
         with self.sessions() as db:
             self.assertEqual(db.get(GeneratedResponse, response_id).status, "draft")
+
+    def test_empty_activity_and_response_history_are_helpful(self):
+        activity = self.client.get("/activity")
+        self.assertIn("No activity yet", activity.text)
+        self.assertIn("Generate a response to get started.", activity.text)
+        detail = self.client.get("/posts/1")
+        self.assertIn("No previous responses for this post.", detail.text)
 
 
 class QueueFilterTests(unittest.TestCase):
@@ -284,6 +293,13 @@ class QueueFilterTests(unittest.TestCase):
         self.assertIn("Unknown influencer filter.", page.text)
         self.assertIn("Unknown topic filter.", page.text)
         self.assertIn("Unknown status filter.", page.text)
+
+    def test_filtered_empty_state_suggests_adjusting_filters(self):
+        page = self.assert_cards(
+            {"influencer": "11", "topic": "Sterility"}, 0
+        )
+        self.assertIn("No posts match these filters", page.text)
+        self.assertIn("Try adjusting the influencer, topic, or status.", page.text)
 
 
 if __name__ == "__main__":
