@@ -59,6 +59,7 @@ class Post(Base):
 
     influencer: Mapped[Influencer] = relationship(back_populates="posts")
     generated_responses: Mapped[list[GeneratedResponse]] = relationship(back_populates="post")
+    activity_logs: Mapped[list[ActivityLog]] = relationship(back_populates="post")
 
 
 def utc_now() -> datetime:
@@ -81,3 +82,21 @@ class GeneratedResponse(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now, onupdate=utc_now)
 
     post: Mapped[Post] = relationship(back_populates="generated_responses")
+    activity_logs: Mapped[list[ActivityLog]] = relationship(back_populates="response")
+
+
+class ActivityLog(Base):
+    __tablename__ = "activity_logs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    post_id: Mapped[int] = mapped_column(ForeignKey("posts.id"), index=True)
+    response_id: Mapped[int | None] = mapped_column(
+        ForeignKey("generated_responses.id"), index=True, nullable=True
+    )
+    action: Mapped[str] = mapped_column(String(50))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+    post: Mapped[Post] = relationship(back_populates="activity_logs")
+    response: Mapped[GeneratedResponse | None] = relationship(
+        back_populates="activity_logs"
+    )

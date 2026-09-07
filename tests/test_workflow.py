@@ -102,7 +102,7 @@ class WorkflowTests(unittest.TestCase):
             response = db.get(GeneratedResponse, response_id)
             self.assertEqual(response.edited_text, response.generated_text)
             self.assertEqual(response.status, "draft")
-            self.assertEqual(response.post.status, "new")
+            self.assertEqual(response.post.status, "drafted")
             self.assertEqual(response.custom_instruction, "Mention sample tracking.")
             self.assertIsNotNone(response.created_at)
             self.assertIsNotNone(response.updated_at)
@@ -177,7 +177,7 @@ class WorkflowTests(unittest.TestCase):
         with self.sessions() as db:
             response = db.get(GeneratedResponse, response_id)
             self.assertEqual(response.edited_text, response.generated_text)
-            self.assertEqual(response.post.status, 'new')
+            self.assertEqual(response.post.status, 'drafted')
             self.assertIsNone(response.custom_instruction)
 
     def test_generation_failure_preserves_form_and_existing_drafts(self):
@@ -197,7 +197,7 @@ class WorkflowTests(unittest.TestCase):
         self.assertIn(f'id="draft-{response_id}"', result.text)
         with self.sessions() as db:
             self.assertEqual(db.scalar(select(func.count()).select_from(GeneratedResponse)), 1)
-            self.assertEqual(db.get(Post, 1).status, "new")
+            self.assertEqual(db.get(Post, 1).status, "drafted")
         self.llm.side_effect = None
         self.generate(goal="Lead Generation", tone="Educational", length="Medium")
 
