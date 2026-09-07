@@ -1,6 +1,6 @@
-# Sapho LinkedIn Assistant
+# Sapho LinkedIn Engagement Assistant
 
-Milestones 1–5 of a take-home assessment for Sapho Bio: a curated HTML post queue and manual LinkedIn engagement workflow using FastAPI, Jinja2, SQLite, SQLAlchemy 2.x, and Gemini.
+Milestones 1–6A of a take-home assessment for Sapho Bio: a curated HTML post queue and manual LinkedIn engagement workflow using FastAPI, Jinja2, SQLite, SQLAlchemy 2.x, and Gemini.
 
 **All 3 sample influencers and 6 sample posts are fictional.** Names, companies, content, dates, relevance scores, and engagement counts are invented. LinkedIn URLs are clearly named sample placeholders and do not identify real profiles or posts.
 
@@ -16,15 +16,14 @@ python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
 test -f .env || cp .env.example .env
-python -m scripts.seed_data
 python -m scripts.import_influencers
 python -m scripts.import_posts
 uvicorn app.main:app --reload
 ```
 
-Open http://127.0.0.1:8000/ to see curated posts newest first. If curated posts have not been imported, the queue falls back to the six demo posts. Before generating, configure your API key as described in the manual smoke test below. Queue browsing and draft editing do not need an API key.
+Before generating a response, open `.env` and add your Google AI Studio key after `GEMINI_API_KEY=`. Keep the configured `GEMINI_MODEL` value. Never commit `.env` or paste the key into a command. Open http://127.0.0.1:8000/ to see curated posts newest first. The queue, filters, influencer ranking, activity history, and saved drafts remain browsable without an API key.
 
-The seed command creates `sapho.db` and missing tables before importing JSON. Running it again skips existing primary keys, preserving existing content, statuses, and response drafts. It does not synchronize edits to existing JSON records. Both JSON files are imported in one transaction, so an invalid record rolls back that run's inserts.
+For demo fallback data, run `python -m scripts.seed_data`. Repeating any importer preserves existing statuses and response history. The application creates or additively upgrades the SQLite schema on startup; no database reset is required.
 
 To create the tables without importing data:
 
@@ -138,19 +137,6 @@ python -m scripts.import_influencers
 
 The importer validates every row before writing. Invalid rows are skipped with the file, row, and reason; all valid rows are committed together in one transaction. Existing databases are upgraded in place with the new influencer scoring and source fields; sample posts and saved response drafts are retained.
 
-To verify the influencer milestone locally from the parent workspace directory:
-
-```bash
-cd sapho-engage
-source .venv/bin/activate
-python -m pip install -r requirements.txt
-python -m scripts.import_influencers
-python -m unittest discover -s tests -v
-uvicorn app.main:app --reload
-```
-
-Open http://127.0.0.1:8000/influencers and confirm exactly 10 curated profiles appear in descending score order, with names, titles, companies, component scores, notes, and LinkedIn links matching `research/influencers.csv`. Confirm sample names do not appear there.
-
 ## Curated LinkedIn Post Dataset
 
 The MVP uses manually researched information from publicly accessible LinkedIn posts. `research/posts.csv` contains concise research summaries rather than complete post text collected through automated scraping. Public availability differs by profile, so the number of researched posts varies across influencers.
@@ -165,20 +151,6 @@ The importer matches each post to an existing curated influencer by normalized L
 
 The normal queue shows only curated posts once at least one has been imported. The six explicitly marked demo posts remain in SQLite for tests and fallback use.
 
-To verify the complete curated workflow:
-
-```bash
-cd /Users/minhthuynguyen/sapho-linkedin-assistant/sapho-engage
-source .venv/bin/activate
-python -m pip install -r requirements.txt
-python -m scripts.import_influencers
-python -m scripts.import_posts
-python -m unittest discover -s tests -v
-uvicorn app.main:app --reload
-```
-
-At http://127.0.0.1:8000/, confirm curated summaries appear newest first, demo posts are hidden, topics and source links are present, and missing engagement is not shown as zero. At http://127.0.0.1:8000/influencers, confirm the existing top-10 ranking remains intact. Open one curated post, generate with Gemini, edit and save the draft, then refresh and confirm it remains in history. Run `python -m scripts.import_posts` again and confirm the summary reports 29 skipped rows with no duplicates.
-
 ## Manual engagement smoke test
 
 ```bash
@@ -191,55 +163,26 @@ python -m unittest discover -s tests -v
 uvicorn app.main:app --reload
 ```
 
-Open http://127.0.0.1:8000/ and filter to one influencer. Select a curated post, generate a response, edit it, and save the draft. Regenerate and confirm both versions remain in newest-first history. Approve one response, copy it, and open the original LinkedIn post in a new tab. After manually commenting, select **Mark as Posted** and confirm the queue shows `posted`.
+With `GEMINI_API_KEY` configured in `.env`:
 
-Open http://127.0.0.1:8000/activity and confirm the generated, saved, regenerated, approved, and marked-posted events appear newest first. Return to the queue, filter Status to Posted, and confirm the post appears. Restart Uvicorn and revisit the post and activity pages to verify that statuses, response history, and activity remain stored in SQLite.
-
-## Manual Gemini smoke test
-
-From `sapho-linkedin-assistant` (skip `cd` if already inside `sapho-engage`):
-
-```bash
-cd sapho-engage
-source .venv/bin/activate
-python -m pip install -r requirements.txt
-test -f .env || cp .env.example .env
-nano .env
-```
-
-In the local editor, add your Google AI Studio API key after `GEMINI_API_KEY=` and set `GEMINI_MODEL=gemini-3.7-flash`. If you already have an older `.env`, add these two entries (old OpenAI variables are not used); keep your existing `DATABASE_PATH`. Do not print the key or paste it into a shell command. Save the file, exit the editor, then run:
-
-```bash
-git check-ignore .env
-python -m scripts.seed_data
-uvicorn app.main:app --reload
-```
-
-1. Open http://127.0.0.1:8000/posts/1. Select a goal, tone, and length and optionally enter `End with a question.`
-2. Select **Generate Response** once. This makes a real Gemini API request, subject to your project’s quota and billing settings. Check that the editable text is a proposed comment, not a demo placeholder; inspect relevance, accuracy, tone, and length.
-3. In another terminal, from `sapho-engage` with the virtual environment active, inspect the newest SQLite draft:
-
-```bash
-python - <<'PY'
-from sqlalchemy import select
-from app.database import SessionLocal
-from app.models import GeneratedResponse
-with SessionLocal() as db:
-    draft = db.scalar(select(GeneratedResponse).where(GeneratedResponse.post_id == 1).order_by(GeneratedResponse.id.desc()))
-    if draft is None:
-        print("No draft exists for post 1.")
-    else:
-        print("Draft:", draft.id, "Post:", draft.post_id, "Status:", draft.status)
-        print("Settings:", draft.goal, draft.tone, draft.length)
-        print("Generated:", draft.generated_text)
-        print("Edited:", draft.edited_text)
-        print("Updated:", draft.updated_at)
-PY
-```
-
-4. Initially, generated and edited text should match. Change the text in the browser and select **Save Draft**. Confirm **Draft saved.**, reload, and rerun the SQLite check: edited text should change while generated text remains the original output.
-5. Generate a second response, then use **Edit draft** to reopen the first. Confirm newest-first history and that both drafts retain their text. Older Milestone 2 placeholders remain as historical drafts.
-6. To inspect failure handling without an API request, stop the server and run `GEMINI_API_KEY= uvicorn app.main:app --reload`. Try generating with nondefault settings and custom instructions. Confirm an inline error, retained fields, and no new draft. Stop and restart with the normal command to restore `.env` configuration.
+1. Open http://127.0.0.1:8000/ and confirm the curated post and influencer counts.
+2. Apply individual and combined queue filters.
+3. Select a combination with no results and confirm the filtered empty state is useful.
+4. Open an original LinkedIn post and confirm it uses a new tab.
+5. Open a curated post and select **Generate Response**; confirm the button changes to **Generating...** and cannot be submitted twice.
+6. Confirm Gemini returns an editable response with the chosen settings.
+7. Edit the response and select **Save Draft**.
+8. Select **Regenerate** and confirm its loading state and a second history record.
+9. Select **Copy Response** and confirm **Copied ✓** appears briefly.
+10. Approve the current response and confirm both lifecycle badges update.
+11. Use the prominent **Open LinkedIn** action.
+12. After manually commenting, select **Mark as Posted** and confirm its manual-tracking message.
+13. Return to the queue and confirm the post displays Posted.
+14. Open http://127.0.0.1:8000/activity and confirm lifecycle events appear newest first.
+15. Open http://127.0.0.1:8000/influencers and confirm the top-10 ranking still loads.
+16. Narrow the browser and confirm filters stack and the post-detail columns collapse cleanly.
+17. Stop and restart Uvicorn, then confirm statuses, response history, and activity persist.
+18. Remove `GEMINI_API_KEY`, restart, and confirm browsing still works while generation shows a concise configuration error.
 
 ## Automated checks
 
@@ -249,50 +192,13 @@ From the parent workspace directory (`sapho-linkedin-assistant`), run the follow
 cd sapho-engage
 source .venv/bin/activate
 python -m pip install -r requirements.txt
-python -m pip install 'httpx>=0.28,<1.0'
 python -m unittest discover -s tests -v
 ```
 
-Tests use temporary SQLite databases and mocked generation/SDK calls; they never call the real API and require no API key. Existing queue, seed, editing, saving, status, and draft-history regressions remain covered. Additional tests check exact output persistence, configuration forwarding, all 48 prompt combinations, error rendering, missing configuration, provider/network/timeout errors, and empty or incomplete output. The placeholder utility is retained and tested independently. HTTPX is also a dependency of the Google Gen AI SDK; the explicit test install command ensures a compatible test-client version.
-
-To run Milestone 3 from an existing checkout, inside `sapho-engage`:
-
-```bash
-source .venv/bin/activate
-python -m pip install -r requirements.txt
-python -m scripts.seed_data
-uvicorn app.main:app --reload
-```
+Tests use temporary SQLite databases and mocked generation/SDK calls; they never call Gemini, LinkedIn, or another external service and require no API key. Coverage includes importers, prompt construction, generation failures, response lifecycle, filters, empty states, loading-state markup, provenance links, and prior milestone regressions.
 
 ## Configuration and sample format
 
 `.env` is optional. `DATABASE_PATH` defaults to `sapho.db` in this project directory. Relative paths are resolved from this directory; absolute paths also work. The database file's parent directory must exist. An exported environment variable takes precedence over `.env`. Response generation requires `GEMINI_API_KEY`. `GEMINI_MODEL` defaults to `gemini-3.7-flash` when unset; an explicitly blank model is a configuration error. The existing python-dotenv setup loads the project `.env` at startup. Restart the server after changing `.env`. Git ignores `.env`; `.env.example` contains no key.
 
 JSON fields match the models. Each post's `influencer_id` must reference an existing influencer or one supplied in the influencers file. IDs must be unique within each file. Use ISO 8601 timestamps with an offset or `Z`; timestamps without an offset are treated as UTC. SQLite stores dates without time zone information after normalization, and the page labels them UTC. Status is a free-text field; the fixtures use `new` and `reviewed` to demonstrate display only.
-
-## Smoke checks
-
-With the virtual environment active and the server running, use another terminal in `sapho-engage`:
-
-```bash
-source .venv/bin/activate
-python -m scripts.seed_data
-python -c "from sqlalchemy import select, func; from app.database import SessionLocal; from app.models import Influencer, Post; s = SessionLocal(); print('Influencers:', s.scalar(select(func.count()).select_from(Influencer))); print('Posts:', s.scalar(select(func.count()).select_from(Post))); s.close()"
-curl -f http://127.0.0.1:8000/
-curl -f http://127.0.0.1:8000/static/styles.css
-```
-
-On an unchanged sample database, reseeding reports zero additions; counts remain 3 influencers and 6 posts. Both HTTP requests should return successfully.
-
-Manual checks:
-
-- Confirm six cards, newest first, with all requested fields and visible SAMPLE labels.
-- Confirm multiline content and long URLs remain readable in a narrow browser window, and zero likes/comments display correctly.
-- Placeholder LinkedIn URLs may show a missing page or LinkedIn login; they are not real data.
-- Check the empty state using a separate database: stop the server, then run `DATABASE_PATH=empty-check.db uvicorn app.main:app --reload`. Stop it and run the usual command to return to the sample database.
-- If port 8000 is busy, append `--port 8001` and open that port instead.
-- Open a post and inspect the desktop two-column layout and stacked narrow-screen layout. Check labels, keyboard navigation, and textarea resizing.
-- Try different response settings and custom instructions. Review whether the comment responds specifically to the post, follows the selected goal/tone/length, avoids unsupported claims, and remains editable.
-- Edit and save a response, confirm **Draft saved.**, then reload and revisit the queue. A previously `new` post should now be `drafted`.
-- Generate a second draft and reopen the first via **Edit draft**. Verify newest-first history and that both drafts retain their own text.
-- Whitespace-only saved text should return a 422 error; browser validation may prevent submitting a completely empty textarea. Use the browser Back button to return from an error page.
