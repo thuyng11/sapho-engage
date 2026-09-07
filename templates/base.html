@@ -11,7 +11,11 @@
       <header>
         <p class="eyebrow">Sapho Bio · Take-home assessment</p>
         <h1>Sapho LinkedIn Assistant</h1>
-        <p class="sample-notice"><strong>SAMPLE DATA ONLY.</strong> All seeded people, companies, posts, dates, and engagement counts are fictional. LinkedIn URLs are illustrative placeholders, not real post links.</p>
+        <nav aria-label="Primary">
+          <a href="{{ url_for('index') }}">Post Queue</a>
+          <a href="{{ url_for('influencers') }}">Influencers</a>
+        </nav>
+        {% block data_notice %}<p class="sample-notice"><strong>SAMPLE DATA ONLY.</strong> All seeded people, companies, posts, dates, and engagement counts are fictional. LinkedIn URLs are illustrative placeholders, not real post links.</p>{% endblock %}
       </header>
       {% block content %}{% endblock %}
     </main>

@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import BASE_DIR, get_db, init_db
-from app.models import GeneratedResponse, Post, utc_now
+from app.models import GeneratedResponse, Influencer, Post, utc_now
 from app.services.llm_service import GenerationError, generate_response as generate_llm_response
 
 GOALS = ("Thought Leadership", "Engagement", "Lead Generation", "Relationship Building")
@@ -37,6 +37,24 @@ def index(request: Request, db: Annotated[Session, Depends(get_db)]):
     ).all()
     return templates.TemplateResponse(
         request=request, name="index.html", context={"posts": posts}
+    )
+
+
+@app.get("/influencers", response_class=HTMLResponse)
+def influencers(request: Request, db: Annotated[Session, Depends(get_db)]):
+    ranked = db.scalars(
+        select(Influencer)
+        .where(
+            Influencer.is_sample.is_(False),
+            Influencer.source_type == "manual_research",
+        )
+        .order_by(Influencer.overall_score.desc(), Influencer.name.asc())
+        .limit(10)
+    ).all()
+    return templates.TemplateResponse(
+        request=request,
+        name="influencers.html",
+        context={"influencers": ranked},
     )
 
 

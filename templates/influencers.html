@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block main_class %}detail-page{% endblock %}
+{% block data_notice %}{% endblock %}
+
+{% block content %}
+<section aria-labelledby="influencers-heading">
+  <h2 id="influencers-heading">Top Compounding Pharmacy Industry Voices</h2>
+  <p>Influencer Score = 40% Industry Relevance + 20% Posting Activity + 20% Engagement + 20% Professional Credibility.</p>
+  <p class="muted">This prototype heuristic ranks candidates manually researched from publicly available information. Activity and engagement observations are a research snapshot and may change over time; this is not an official LinkedIn metric.</p>
+
+  {% if influencers %}
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Rank</th>
+          <th scope="col">Industry voice</th>
+          <th scope="col">Overall</th>
+          <th scope="col">Relevance</th>
+          <th scope="col">Activity</th>
+          <th scope="col">Engagement</th>
+          <th scope="col">Credibility</th>
+          <th scope="col">Research notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for influencer in influencers %}
+        <tr>
+          <td>{{ loop.index }}</td>
+          <td>
+            <a href="{{ influencer.linkedin_url }}" target="_blank" rel="noopener noreferrer"><strong>{{ influencer.name }}</strong></a>
+            <span class="badge">Curated</span><br>
+            {{ influencer.title }}<br>
+            <span class="muted">{{ influencer.company }}</span>
+          </td>
+          <td><strong>{{ '%.1f' | format(influencer.overall_score) }}</strong></td>
+          <td>{{ '%.1f' | format(influencer.relevance_score) }}</td>
+          <td>{{ '%.1f' | format(influencer.activity_score) }}</td>
+          <td>{{ '%.1f' | format(influencer.engagement_score) }}</td>
+          <td>{{ '%.1f' | format(influencer.credibility_score) }}</td>
+          <td>{{ influencer.notes }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="post">
+    <p>No curated influencers have been imported yet.</p>
+    <p>Run <code>python -m scripts.import_influencers</code> from the project directory, then refresh this page.</p>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}
