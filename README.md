@@ -1,10 +1,10 @@
 # Sapho LinkedIn Engagement Assistant
 
-Milestones 1–6A of a take-home assessment for Sapho Bio: a curated HTML post queue and manual LinkedIn engagement workflow using FastAPI, Jinja2, SQLite, SQLAlchemy 2.x, and Gemini.
+Milestones 1–6B of a take-home assessment for Sapho Bio: a curated HTML post queue and manual LinkedIn engagement workflow using FastAPI, Jinja2, SQLite, SQLAlchemy 2.x, and Gemini.
 
 **All 3 sample influencers and 6 sample posts are fictional.** Names, companies, content, dates, relevance scores, and engagement counts are invented. LinkedIn URLs are clearly named sample placeholders and do not identify real profiles or posts.
 
-The normal generation workflow uses the official Google Gen AI Python SDK and Gemini generate-content API. Existing sample posts and older demo drafts are preserved. There is no scraping, authentication, deployment configuration, or LinkedIn posting.
+The normal generation workflow uses the official Google Gen AI Python SDK and Gemini generate-content API. Existing sample posts and older demo drafts are preserved. There is no scraping, authentication, or automatic LinkedIn posting.
 
 ## Local setup
 
@@ -150,6 +150,38 @@ python -m scripts.import_posts
 The importer matches each post to an existing curated influencer by normalized LinkedIn profile URL. It uses the post URL for duplicate-safe upserts, preserves existing post statuses and generated-response history, and marks imported posts as `manual_research`. Blank reaction or comment counts remain unknown (`NULL`) rather than becoming a misleading zero. Re-running an unchanged import skips every existing row.
 
 The normal queue shows only curated posts once at least one has been imported. The six explicitly marked demo posts remain in SQLite for tests and fallback use.
+
+## Deployment
+
+The application is configured for one Railway service using Railway's normal Python build. `railway.toml` starts `scripts/start_production.sh`, and the script initializes the schema, imports both curated datasets with duplicate-safe upserts, and then starts Uvicorn on Railway's `PORT`. The startup work runs after the volume is mounted. It does not run during the image build.
+
+In the Railway dashboard:
+
+1. Create a project and deploy the GitHub repository `thuyng11/sapho-engage`.
+2. Keep the service root directory at the repository root and use the default Railpack Python builder. Do not add a Dockerfile or custom build command. Confirm the Start Command resolves to `sh scripts/start_production.sh`; `railway.toml` supplies it for the current deployment configuration format.
+3. Attach a persistent volume to the web service and set its mount path to `/data`.
+4. Add `DATABASE_PATH=/data/sapho.db` to the service variables.
+5. Add `GEMINI_API_KEY` as a service variable using the key value. Do not put it in a file or deployment log.
+6. Add `GEMINI_MODEL=gemini-3.7-flash`.
+7. Generate a Railway public domain for the service and deploy the `main` branch.
+
+The first start on an empty volume should report 10 created influencers and 29 created posts before Uvicorn starts. Later starts should report them as skipped when the research files have not changed. Because both importers update in place, existing post statuses, generated responses, edited drafts, and activity records remain in `/data/sapho.db` across restarts. Browsing the queue, influencer ranking, activity page, and health endpoint works without a Gemini key; only response generation needs it.
+
+After deployment, replace `<railway-domain>` below with the generated hostname:
+
+```bash
+curl --fail https://<railway-domain>/health
+```
+
+Confirm the response is `{"status":"ok"}`, then inspect:
+
+- `https://<railway-domain>/`
+- `https://<railway-domain>/influencers`
+- `https://<railway-domain>/activity`
+
+Generate a response for one curated post, edit and save it, and restart the service from Railway. After the restart, confirm the response history, post status, and activity event remain. Check the deployment logs for `Created: 0` and the expected skipped counts to confirm the startup imports did not duplicate records.
+
+Keep this SQLite deployment at one service replica. Railway volumes cannot be attached to replicas, and a volume-backed redeploy can have brief downtime. Configure volume backups in Railway if the prototype data needs recovery protection.
 
 ## Manual engagement smoke test
 
