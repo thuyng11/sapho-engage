@@ -9,7 +9,13 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event, func, inspect, select, text
 from sqlalchemy.orm import sessionmaker
 
-from app.database import Base, enable_foreign_keys, get_db, upgrade_influencer_table
+from app.database import (
+    Base,
+    enable_foreign_keys,
+    get_db,
+    upgrade_influencer_table,
+    upgrade_post_table,
+)
 from app.main import app
 from app.models import GeneratedResponse, Influencer, Post
 from app.services.influencer_scoring import calculate_overall_score
@@ -177,13 +183,27 @@ class DatabaseUpgradeTests(unittest.TestCase):
             connection.exec_driver_sql("INSERT INTO posts VALUES (1, 1, 'Post', 'https://example.com/post', '2026-01-01', 1, 1, 'drafted')")
             connection.exec_driver_sql("INSERT INTO generated_responses VALUES (1, 1, 'Engagement', 'Professional', 'Short', NULL, 'Original', 'Edited', 'draft', '2026-01-01', '2026-01-02')")
         upgrade_influencer_table(engine)
+        upgrade_post_table(engine)
         columns = {column["name"] for column in inspect(engine).get_columns("influencers")}
         self.assertTrue({"activity_score", "engagement_score", "credibility_score", "overall_score", "source_type", "is_sample"} <= columns)
+        post_columns = {
+            column["name"]: column for column in inspect(engine).get_columns("posts")
+        }
+        self.assertTrue({
+            "topic", "content_type", "collected_at", "source_type", "is_sample",
+            "verification_status", "source_url", "engagement_note",
+        } <= set(post_columns))
+        self.assertTrue(post_columns["likes"]["nullable"])
+        self.assertTrue(post_columns["comments"]["nullable"])
         with engine.connect() as connection:
             sample = connection.execute(text("SELECT source_type, is_sample FROM influencers WHERE id=1")).one()
             self.assertEqual(sample, ("sample", 1))
             self.assertEqual(connection.scalar(text("SELECT COUNT(*) FROM posts")), 1)
             self.assertEqual(connection.scalar(text("SELECT COUNT(*) FROM generated_responses")), 1)
+            post = connection.execute(text(
+                "SELECT status, source_type, is_sample FROM posts WHERE id=1"
+            )).one()
+            self.assertEqual(post, ("drafted", "sample", 1))
 
 
 if __name__ == "__main__":
