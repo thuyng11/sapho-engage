@@ -9,9 +9,13 @@ from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
-database_path = Path(os.getenv("DATABASE_PATH", "sapho.db")).expanduser()
-if not database_path.is_absolute():
-    database_path = BASE_DIR / database_path
+def resolve_database_path(configured_path: str | None = None) -> Path:
+    value = configured_path if configured_path is not None else os.getenv("DATABASE_PATH")
+    path = Path(value.strip() if value and value.strip() else "sapho.db").expanduser()
+    return path if path.is_absolute() else BASE_DIR / path
+
+
+database_path = resolve_database_path()
 
 engine = create_engine(
     URL.create("sqlite", database=str(database_path)),
@@ -35,6 +39,7 @@ class Base(DeclarativeBase):
 def init_db() -> None:
     from app import models  # Register all models before creating missing tables.
 
+    database_path.parent.mkdir(parents=True, exist_ok=True)
     Base.metadata.create_all(bind=engine)
     upgrade_influencer_table()
     upgrade_post_table()
