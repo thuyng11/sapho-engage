@@ -18,7 +18,10 @@
 <div class="detail-grid">
   <section class="post" aria-labelledby="original-heading">
     <h2 id="original-heading">{{ "Demo LinkedIn post" if post.is_sample else "Curated LinkedIn post" }}</h2>
-    <h3>{{ post.influencer.name }} <span class="badge {{ 'demo-badge' if post.is_sample else '' }}">{{ "Demo" if post.is_sample else "Curated" }}</span></h3>
+    <div class="card-heading">
+      <h3>{{ post.influencer.name }}</h3>
+      <span class="source-badge {{ 'source-demo' if post.is_sample else 'source-curated' }}">{{ "Demo" if post.is_sample else "Curated" }}</span>
+    </div>
     <p class="muted">{{ post.influencer.title }} · {{ post.influencer.company }}</p>
     <p><time datetime="{{ post.posted_at.isoformat() }}Z">{{ post.posted_at.strftime('%b %d, %Y at %H:%M') }} UTC</time></p>
     {% if post.topic %}<p><strong>Topic:</strong> {{ post.topic }}</p>{% endif %}
@@ -27,16 +30,16 @@
     <dl class="post-meta">
       <div><dt>Reactions</dt><dd>{{ post.likes if post.likes is not none else "—" }}</dd></div>
       <div><dt>Comments</dt><dd>{{ post.comments if post.comments is not none else "—" }}</dd></div>
-      <div><dt>Status</dt><dd>{{ post.status }}</dd></div>
+      <div><dt>Status</dt><dd><span class="status-badge status-{{ post.status }}">{{ post.status | title }}</span></dd></div>
     </dl>
-    <p class="post-url">LinkedIn post URL: <a href="{{ post.post_url }}" target="_blank" rel="noopener noreferrer">{{ post.post_url }}</a></p>
+    <p class="post-url"><a href="{{ post.post_url }}" target="_blank" rel="noopener noreferrer">View Original on LinkedIn ↗</a></p>
   </section>
 
   <section class="post" aria-labelledby="configure-heading">
     <h2 id="configure-heading">Configure response</h2>
     {% if error %}<p class="generation-error" role="alert">{{ error }}</p>{% endif %}
     <p class="muted">Generate a response using your selected settings, then review and edit it before saving.</p>
-    <form method="post" action="{{ url_for('generate_response', post_id=post.id) }}">
+    <form class="generation-form" method="post" action="{{ url_for('generate_response', post_id=post.id) }}">
       <label for="goal">Goal</label>
       <select id="goal" name="goal" required>
         {% for goal in goals %}<option value="{{ goal }}" {% if goal == form_values.goal %}selected{% endif %}>{{ goal }}</option>{% endfor %}
@@ -51,20 +54,20 @@
       </select>
       <label for="custom-instruction">Custom instructions (optional)</label>
       <textarea id="custom-instruction" name="custom_instruction" rows="3">{{ form_values.custom_instruction }}</textarea>
-      <button type="submit">Generate Response</button>
+      <button type="submit" data-loading-label="Generating...">Generate Response</button>
     </form>
 
     {% if active_response %}
     <h2 id="editor-heading">Edit response</h2>
-    <p class="muted">Response #{{ active_response.id }} · {{ active_response.goal }} / {{ active_response.tone }} / {{ active_response.length }} · <strong>{{ active_response.status | title }}</strong></p>
+    <p class="response-context">Response #{{ active_response.id }} · {{ active_response.goal }} / {{ active_response.tone }} / {{ active_response.length }} · <span class="status-badge status-{{ active_response.status }}">{{ active_response.status | title }}</span></p>
     <form method="post" action="{{ url_for('save_response', response_id=active_response.id) }}" aria-labelledby="editor-heading">
       <label for="edited-text">Response text</label>
       <textarea id="edited-text" name="edited_text" rows="12" required {% if active_response.status == "posted" %}readonly{% endif %}>{{ active_response.edited_text if active_response.edited_text is not none else active_response.generated_text }}</textarea>
       {% if active_response.status == "draft" %}
       <p class="muted">Changes are stored when you select Save Draft. Approval saves the current text first.</p>
       <div class="response-actions">
-        <button type="submit">Save Draft</button>
-        <button type="submit" formaction="{{ url_for('regenerate_response', response_id=active_response.id) }}" formnovalidate>Regenerate</button>
+        <button class="secondary-button" type="submit">Save Draft</button>
+        <button class="secondary-button" type="submit" formaction="{{ url_for('regenerate_response', response_id=active_response.id) }}" formnovalidate data-loading-label="Generating...">Regenerate</button>
         <button type="submit" formaction="{{ url_for('approve_response', response_id=active_response.id) }}">Approve</button>
         <button type="button" class="secondary-button copy-response" data-copy-target="edited-text">Copy Response</button>
         <span class="copy-feedback" role="status" aria-live="polite"></span>
@@ -72,7 +75,7 @@
       {% elif active_response.status == "approved" %}
       <p class="muted">Saving changed approved text returns this response to Draft for review.</p>
       <div class="response-actions">
-        <button type="submit">Save Changes</button>
+        <button class="secondary-button" type="submit">Save Changes</button>
         <button type="button" class="secondary-button copy-response" data-copy-target="edited-text">Copy Response</button>
         <a class="button secondary-button" href="{{ post.post_url }}" target="_blank" rel="noopener noreferrer">Open LinkedIn</a>
         <button type="submit" formaction="{{ url_for('mark_response_posted', response_id=active_response.id) }}" formnovalidate>Mark as Posted</button>
@@ -98,12 +101,14 @@
   <article class="post" id="draft-{{ draft.id }}">
     <h3>Response #{{ draft.id }} {% if active_response and draft.id == active_response.id %}<span class="badge">Active</span>{% endif %}</h3>
     <p><time datetime="{{ draft.created_at.isoformat() }}Z">{{ draft.created_at.strftime('%b %d, %Y at %H:%M') }} UTC</time></p>
-    <p>{{ draft.goal }} · {{ draft.tone }} · {{ draft.length }} · Status: {{ draft.status }}</p>
+    <p>{{ draft.goal }} · {{ draft.tone }} · {{ draft.length }} · <span class="status-badge status-{{ draft.status }}">{{ draft.status | title }}</span></p>
     <p class="post-content">{{ draft.edited_text if draft.edited_text is not none else draft.generated_text }}</p>
-    <a href="{{ url_for('post_detail', post_id=post.id) }}?response_id={{ draft.id }}#editor-heading">Edit draft</a>
+    <a href="{{ url_for('post_detail', post_id=post.id) }}?response_id={{ draft.id }}#editor-heading">View response</a>
   </article>
   {% else %}
-  <p>No drafts yet. Configure and generate a response to get started.</p>
+  <div class="empty-state compact-empty">
+    <p>No previous responses for this post.</p>
+  </div>
   {% endfor %}
 </section>
 {% endblock %}
