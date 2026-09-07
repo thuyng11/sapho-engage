@@ -49,3 +49,4 @@ th { background: #eaf0f2; white-space: nowrap; }
 .activity-event { margin: 16px 0; padding: 18px 22px; background: #fff; border-left: 4px solid #77aab3; border-radius: 4px; }
 .activity-event p { margin: 6px 0; }
 @media (max-width: 760px) { .detail-grid { grid-template-columns: 1fr; gap: 0; } }
+@media (max-width: 900px) { .queue-filters { grid-template-columns: 1fr; align-items: stretch; } }

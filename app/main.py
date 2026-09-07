@@ -37,29 +37,77 @@ templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
 
 @app.get("/", response_class=HTMLResponse)
-def index(request: Request, db: Annotated[Session, Depends(get_db)]):
-    curated_query = (
+def index(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    influencer: str | None = None,
+    topic: str | None = None,
+    status: str | None = None,
+):
+    curated_posts = db.scalars(
         select(Post)
-        .options(joinedload(Post.influencer))
         .where(
             Post.is_sample.is_(False),
             Post.source_type == "manual_research",
         )
-        .order_by(Post.posted_at.desc(), Post.id.desc())
+        .limit(1)
+    ).first()
+    using_curated = curated_posts is not None
+    source_conditions = (
+        (Post.is_sample.is_(False), Post.source_type == "manual_research")
+        if using_curated else (Post.is_sample.is_(True),)
     )
-    posts = db.scalars(curated_query).all()
-    using_curated = bool(posts)
-    if not using_curated:
-        posts = db.scalars(
-            select(Post)
-            .options(joinedload(Post.influencer))
-            .where(Post.is_sample.is_(True))
-            .order_by(Post.posted_at.desc(), Post.id.desc())
-        ).all()
+    available_posts = db.scalars(
+        select(Post)
+        .options(joinedload(Post.influencer))
+        .where(*source_conditions)
+        .order_by(Post.posted_at.desc(), Post.id.desc())
+    ).all()
+    influencer_options = sorted(
+        {post.influencer.id: post.influencer for post in available_posts}.values(),
+        key=lambda item: item.name.lower(),
+    )
+    topic_options = sorted(
+        {post.topic for post in available_posts if post.topic}, key=str.lower
+    )
+    filter_errors: list[str] = []
+    selected_influencer: int | None = None
+    if influencer:
+        try:
+            candidate = int(influencer)
+        except ValueError:
+            filter_errors.append("Unknown influencer filter.")
+        else:
+            if candidate in {item.id for item in influencer_options}:
+                selected_influencer = candidate
+            else:
+                filter_errors.append("Unknown influencer filter.")
+    selected_topic = topic if topic in topic_options else None
+    if topic and selected_topic is None:
+        filter_errors.append("Unknown topic filter.")
+    selected_status = status.lower() if status and status.lower() in POST_STATUSES else None
+    if status and selected_status is None:
+        filter_errors.append("Unknown status filter.")
+    posts = [
+        post for post in available_posts
+        if (selected_influencer is None or post.influencer_id == selected_influencer)
+        and (selected_topic is None or post.topic == selected_topic)
+        and (selected_status is None or post.status == selected_status)
+    ]
     return templates.TemplateResponse(
         request=request,
         name="index.html",
-        context={"posts": posts, "using_curated": using_curated},
+        context={
+            "posts": posts,
+            "using_curated": using_curated,
+            "influencer_options": influencer_options,
+            "topic_options": topic_options,
+            "status_options": POST_STATUSES,
+            "selected_influencer": selected_influencer,
+            "selected_topic": selected_topic,
+            "selected_status": selected_status,
+            "filter_errors": filter_errors,
+        },
     )
 
 

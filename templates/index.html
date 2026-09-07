@@ -12,6 +12,38 @@
 <section aria-labelledby="queue-heading">
   <h2 id="queue-heading">Post queue <span class="muted">({{ posts | length }})</span></h2>
   <p class="muted">{{ "Curated posts" if using_curated else "Demo posts" }} · Newest first · Dates in UTC</p>
+  <form class="queue-filters" method="get" action="{{ url_for('index') }}">
+    <div>
+      <label for="influencer">Influencer</label>
+      <select id="influencer" name="influencer">
+        <option value="">All</option>
+        {% for item in influencer_options %}
+        <option value="{{ item.id }}" {% if item.id == selected_influencer %}selected{% endif %}>{{ item.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="topic">Topic</label>
+      <select id="topic" name="topic">
+        <option value="">All</option>
+        {% for item in topic_options %}
+        <option value="{{ item }}" {% if item == selected_topic %}selected{% endif %}>{{ item }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="status">Status</label>
+      <select id="status" name="status">
+        <option value="">All</option>
+        {% for item in status_options %}
+        <option value="{{ item }}" {% if item == selected_status %}selected{% endif %}>{{ item | title }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit">Apply Filters</button>
+    <a href="{{ url_for('index') }}">Clear</a>
+  </form>
+  {% for error in filter_errors %}<p class="filter-error" role="alert">{{ error }}</p>{% endfor %}
   {% for post in posts %}
   <article class="post" aria-labelledby="post-{{ post.id }}">
     <h3 id="post-{{ post.id }}">{{ post.influencer.name }} <span class="badge {{ 'demo-badge' if post.is_sample else '' }}">{{ "Demo" if post.is_sample else "Curated" }}</span></h3>
@@ -29,7 +61,7 @@
     <a class="button" href="{{ url_for('post_detail', post_id=post.id) }}">Generate Response</a>
   </article>
   {% else %}
-  <p class="post">No posts yet. Run <code>python -m scripts.import_posts</code> or <code>python -m scripts.seed_data</code> from the project directory, then refresh this page.</p>
+  <p class="post">No posts match the current filters. Clear the filters or import post data if the queue is empty.</p>
   {% endfor %}
 </section>
 {% endblock %}
