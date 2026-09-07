@@ -1,0 +1,4 @@
+[deploy]
+startCommand = "sh scripts/start_production.sh"
+healthcheckPath = "/health"
+healthcheckTimeout = 100
