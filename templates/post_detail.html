@@ -21,22 +21,23 @@
 
   <section class="post" aria-labelledby="configure-heading">
     <h2 id="configure-heading">Configure response</h2>
-    <p class="muted">Demo only. Generates a placeholder with your selected settings.</p>
+    {% if error %}<p class="generation-error" role="alert">{{ error }}</p>{% endif %}
+    <p class="muted">Generate a response using your selected settings, then review and edit it before saving.</p>
     <form method="post" action="{{ url_for('generate_response', post_id=post.id) }}">
       <label for="goal">Goal</label>
       <select id="goal" name="goal" required>
-        {% for goal in goals %}<option value="{{ goal }}" {% if goal == (active_response.goal if active_response else 'Thought Leadership') %}selected{% endif %}>{{ goal }}</option>{% endfor %}
+        {% for goal in goals %}<option value="{{ goal }}" {% if goal == form_values.goal %}selected{% endif %}>{{ goal }}</option>{% endfor %}
       </select>
       <label for="tone">Tone</label>
       <select id="tone" name="tone" required>
-        {% for tone in tones %}<option value="{{ tone }}" {% if tone == (active_response.tone if active_response else 'Professional') %}selected{% endif %}>{{ tone }}</option>{% endfor %}
+        {% for tone in tones %}<option value="{{ tone }}" {% if tone == form_values.tone %}selected{% endif %}>{{ tone }}</option>{% endfor %}
       </select>
       <label for="length">Length</label>
       <select id="length" name="length" required>
-        {% for length in lengths %}<option value="{{ length }}" {% if length == (active_response.length if active_response else 'Short') %}selected{% endif %}>{{ length }}</option>{% endfor %}
+        {% for length in lengths %}<option value="{{ length }}" {% if length == form_values.length %}selected{% endif %}>{{ length }}</option>{% endfor %}
       </select>
       <label for="custom-instruction">Custom instructions (optional)</label>
-      <textarea id="custom-instruction" name="custom_instruction" rows="3">{{ active_response.custom_instruction or '' if active_response else '' }}</textarea>
+      <textarea id="custom-instruction" name="custom_instruction" rows="3">{{ form_values.custom_instruction }}</textarea>
       <button type="submit">Generate Response</button>
     </form>
 
@@ -55,7 +56,7 @@
 
 <section aria-labelledby="drafts-heading">
   <h2 id="drafts-heading">Existing drafts ({{ drafts | length }})</h2>
-  <p class="muted">Newest first. Generated placeholders are stored immediately; edits require Save Draft.</p>
+  <p class="muted">Newest first. Generated responses are stored immediately; edits require Save Draft.</p>
   {% for draft in drafts %}
   <article class="post" id="draft-{{ draft.id }}">
     <h3>Draft #{{ draft.id }}</h3>
@@ -65,7 +66,7 @@
     <a href="{{ url_for('post_detail', post_id=post.id) }}?response_id={{ draft.id }}#editor-heading">Edit draft</a>
   </article>
   {% else %}
-  <p>No drafts yet. Configure and generate a demo response to get started.</p>
+  <p>No drafts yet. Configure and generate a response to get started.</p>
   {% endfor %}
 </section>
 {% endblock %}

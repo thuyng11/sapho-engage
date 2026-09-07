@@ -1,8 +1,11 @@
+import os
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
+import httpx
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event, func, inspect, select
 from sqlalchemy.orm import sessionmaker
@@ -11,6 +14,7 @@ from app.database import Base, enable_foreign_keys, get_db
 from app.main import app
 from app.models import GeneratedResponse, Influencer, Post
 from app.services.placeholder_generator import generate_placeholder_response
+from app.services.llm_service import GenerationError, generate_response as real_generate_response
 from scripts.seed_data import seed_data
 
 
@@ -39,6 +43,8 @@ class WorkflowTests(unittest.TestCase):
         self.enterContext(patch("app.main.init_db", lambda: Base.metadata.create_all(self.engine)))
         self.client = self.enterContext(TestClient(app))
         self.form = {"goal": "Thought Leadership", "tone": "Professional", "length": "Short"}
+        self.llm = self.enterContext(patch("app.main.generate_llm_response", return_value="A useful industry perspective."))
+        self.sdk = self.enterContext(patch("app.services.llm_service.genai.Client", side_effect=AssertionError("Real SDK calls are forbidden in workflow tests")))
 
     def seed(self):
         with patch("scripts.seed_data.SessionLocal", self.sessions), patch("scripts.seed_data.init_db"):
@@ -83,12 +89,15 @@ class WorkflowTests(unittest.TestCase):
             self.assertIn(f'<dd>{post.likes}</dd>', page.text)
             self.assertIn(f'<dd>{post.comments}</dd>', page.text)
 
-    def test_generate_is_deterministic_and_persists_configuration(self):
+    def test_mocked_generation_persists_output_and_configuration(self):
         response_id, page = self.generate(
             goal="Relationship Building", tone="Technical", length="Detailed",
             custom_instruction="  Mention sample tracking.  ",
         )
-        self.assertIn('[Demo response — Relationship Building / Technical / Detailed]', page.text)
+        self.assertIn(self.llm.return_value, page.text)
+        args = self.llm.call_args.args
+        self.assertEqual(inspect(args[0]).identity, (1,))
+        self.assertEqual(args[1:], ("Relationship Building", "Technical", "Detailed", "Mention sample tracking."))
         with self.sessions() as db:
             response = db.get(GeneratedResponse, response_id)
             self.assertEqual(response.edited_text, response.generated_text)
@@ -97,10 +106,7 @@ class WorkflowTests(unittest.TestCase):
             self.assertEqual(response.custom_instruction, "Mention sample tracking.")
             self.assertIsNotNone(response.created_at)
             self.assertIsNotNone(response.updated_at)
-            expected = generate_placeholder_response(
-                response.post, response.goal, response.tone, response.length, response.custom_instruction
-            )
-            self.assertEqual(response.generated_text, expected)
+            self.assertEqual(response.generated_text, self.llm.return_value)
         self.client.get(f"/posts/1?response_id={response_id}")
         with self.sessions() as db:
             self.assertEqual(db.scalar(select(func.count()).select_from(GeneratedResponse)), 1)
@@ -155,6 +161,7 @@ class WorkflowTests(unittest.TestCase):
                 self.assertEqual(self.client.post(f'/posts/{value}/generate', data=self.form).status_code, status)
                 self.assertEqual(self.client.post(f'/responses/{value}/save', data={'edited_text': 'Draft'}).status_code, status)
         self.assertEqual(self.client.get('/posts/1?response_id=9999').status_code, 404)
+        self.llm.assert_not_called()
 
     def test_invalid_forms_do_not_write(self):
         for field in self.form:
@@ -163,6 +170,7 @@ class WorkflowTests(unittest.TestCase):
                 self.assertEqual(self.client.post('/posts/1/generate', data=form).status_code, 422)
         with self.sessions() as db:
             self.assertEqual(db.scalar(select(func.count()).select_from(GeneratedResponse)), 0)
+        self.llm.assert_not_called()
         response_id, _ = self.generate()
         for form in ({}, {'edited_text': ''}, {'edited_text': ' \n\t '}):
             self.assertEqual(self.client.post(f'/responses/{response_id}/save', data=form).status_code, 422)
@@ -171,6 +179,61 @@ class WorkflowTests(unittest.TestCase):
             self.assertEqual(response.edited_text, response.generated_text)
             self.assertEqual(response.post.status, 'new')
             self.assertIsNone(response.custom_instruction)
+
+    def test_generation_failure_preserves_form_and_existing_drafts(self):
+        response_id, _ = self.generate()
+        self.llm.side_effect = GenerationError("Sensitive provider details must not be shown")
+        form = {
+            "goal": "Lead Generation", "tone": "Educational", "length": "Medium",
+            "custom_instruction": "  Focus on turnaround time. <script>test</script>  ",
+        }
+        result = self.client.post('/posts/1/generate', data=form)
+        self.assertEqual(result.status_code, 503)
+        self.assertIn("Unable to generate a response right now.", result.text)
+        self.assertNotIn("Sensitive provider details", result.text)
+        for field in ("goal", "tone", "length"):
+            self.assertIn(f'value="{form[field]}" selected', result.text)
+        self.assertIn("  Focus on turnaround time. &lt;script&gt;test&lt;/script&gt;  ", result.text)
+        self.assertIn(f'id="draft-{response_id}"', result.text)
+        with self.sessions() as db:
+            self.assertEqual(db.scalar(select(func.count()).select_from(GeneratedResponse)), 1)
+            self.assertEqual(db.get(Post, 1).status, "new")
+        self.llm.side_effect = None
+        self.generate(goal="Lead Generation", tone="Educational", length="Medium")
+
+    def test_missing_configuration_shows_error_without_writing(self):
+        self.llm.side_effect = real_generate_response
+        for config in ({"GEMINI_API_KEY": ""}, {"GEMINI_API_KEY": "test-only", "GEMINI_MODEL": " "}):
+            with self.subTest(configured_model="GEMINI_MODEL" in config), patch.dict(os.environ, config):
+                result = self.client.post('/posts/1/generate', data=self.form)
+                self.assertEqual(result.status_code, 503)
+                self.assertIn("Please check the API configuration and try again.", result.text)
+        self.sdk.assert_not_called()
+        with self.sessions() as db:
+            self.assertEqual(db.scalar(select(func.count()).select_from(GeneratedResponse)), 0)
+
+    def test_placeholder_utility_remains_deterministic(self):
+        with self.sessions() as db:
+            post = db.get(Post, 1)
+            args = (post, "Thought Leadership", "Professional", "Short", None)
+            self.assertEqual(generate_placeholder_response(*args), generate_placeholder_response(*args))
+            self.assertIn("[Demo response", generate_placeholder_response(*args))
+        self.llm.assert_not_called()
+
+    def test_service_timeout_and_empty_output_do_not_create_drafts(self):
+        self.llm.side_effect = real_generate_response
+        self.sdk.side_effect = None
+        client = self.sdk.return_value.__enter__.return_value
+        request = httpx.Request("POST", "https://generativelanguage.googleapis.com/")
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-only", "GEMINI_MODEL": "gemini-3.7-flash"}):
+            for error in (httpx.ReadTimeout("Timed out", request=request), None):
+                client.models.generate_content.side_effect = error
+                client.models.generate_content.return_value = SimpleNamespace(candidates=[SimpleNamespace(finish_reason="STOP")], text=" \n ")
+                result = self.client.post('/posts/1/generate', data=self.form)
+                self.assertEqual(result.status_code, 503)
+                self.assertIn("Unable to generate a response right now.", result.text)
+        with self.sessions() as db:
+            self.assertEqual(db.scalar(select(func.count()).select_from(GeneratedResponse)), 0)
 
 
 if __name__ == "__main__":

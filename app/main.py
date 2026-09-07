@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.database import BASE_DIR, get_db, init_db
 from app.models import GeneratedResponse, Post, utc_now
-from app.services.placeholder_generator import generate_placeholder_response
+from app.services.llm_service import GenerationError, generate_response as generate_llm_response
 
 GOALS = ("Thought Leadership", "Engagement", "Lead Generation", "Relationship Building")
 TONES = ("Professional", "Conversational", "Technical", "Educational")
@@ -56,9 +56,17 @@ def post_detail(
     saved: bool = False,
 ):
     post = get_post_or_404(db, post_id)
+    return render_post_detail(request, post, db, response_id=response_id, saved=saved)
+
+
+def render_post_detail(
+    request: Request, post: Post, db: Session,
+    response_id: int | None = None, saved: bool = False,
+    form_values: dict | None = None, error: str | None = None,
+):
     drafts = db.scalars(
         select(GeneratedResponse)
-        .where(GeneratedResponse.post_id == post_id)
+        .where(GeneratedResponse.post_id == post.id)
         .order_by(GeneratedResponse.created_at.desc(), GeneratedResponse.id.desc())
     ).all()
     active_response = drafts[0] if drafts else None
@@ -66,13 +74,22 @@ def post_detail(
         active_response = next((draft for draft in drafts if draft.id == response_id), None)
         if active_response is None:
             raise HTTPException(status_code=404, detail="Response not found for this post.")
+    if form_values is None:
+        form_values = {
+            "goal": active_response.goal if active_response else "Thought Leadership",
+            "tone": active_response.tone if active_response else "Professional",
+            "length": active_response.length if active_response else "Short",
+            "custom_instruction": (active_response.custom_instruction or "") if active_response else "",
+        }
     return templates.TemplateResponse(
         request=request,
         name="post_detail.html",
+        status_code=503 if error else 200,
         context={
             "post": post, "drafts": drafts, "active_response": active_response,
             "goals": GOALS, "tones": TONES, "lengths": LENGTHS,
             "saved": saved and active_response is not None,
+            "form_values": form_values, "error": error,
         },
     )
 
@@ -91,8 +108,18 @@ def generate_response(
     for field, value, choices in (("goal", goal, GOALS), ("tone", tone, TONES), ("length", length, LENGTHS)):
         if value not in choices:
             raise HTTPException(status_code=422, detail=f"Invalid {field}.")
+    form_values = {
+        "goal": goal, "tone": tone, "length": length,
+        "custom_instruction": custom_instruction or "",
+    }
     custom_instruction = (custom_instruction or "").strip() or None
-    text = generate_placeholder_response(post, goal, tone, length, custom_instruction)
+    try:
+        text = generate_llm_response(post, goal, tone, length, custom_instruction)
+    except GenerationError:
+        return render_post_detail(
+            request, post, db, form_values=form_values,
+            error="Unable to generate a response right now. Please check the API configuration and try again.",
+        )
     response = GeneratedResponse(
         post=post, goal=goal, tone=tone, length=length,
         custom_instruction=custom_instruction,
