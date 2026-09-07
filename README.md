@@ -1,6 +1,6 @@
 # Sapho LinkedIn Assistant
 
-Milestones 1–3 of a take-home assessment for Sapho Bio: a local HTML post queue and editable Gemini-generated response drafts using FastAPI, Jinja2, SQLite, and SQLAlchemy 2.x.
+Milestones 1–4B of a take-home assessment for Sapho Bio: a curated HTML post queue and editable Gemini-generated response drafts using FastAPI, Jinja2, SQLite, and SQLAlchemy 2.x.
 
 **All 3 sample influencers and 6 sample posts are fictional.** Names, companies, content, dates, relevance scores, and engagement counts are invented. LinkedIn URLs are clearly named sample placeholders and do not identify real profiles or posts.
 
@@ -17,10 +17,12 @@ source .venv/bin/activate
 python -m pip install -r requirements.txt
 test -f .env || cp .env.example .env
 python -m scripts.seed_data
+python -m scripts.import_influencers
+python -m scripts.import_posts
 uvicorn app.main:app --reload
 ```
 
-Open http://127.0.0.1:8000/ to see all six posts, newest first. Before generating, configure your API key as described in the manual smoke test below. Queue browsing and draft editing do not need an API key.
+Open http://127.0.0.1:8000/ to see curated posts newest first. If curated posts have not been imported, the queue falls back to the six demo posts. Before generating, configure your API key as described in the manual smoke test below. Queue browsing and draft editing do not need an API key.
 
 The seed command creates `sapho.db` and missing tables before importing JSON. Running it again skips existing primary keys, preserving existing content, statuses, and response drafts. It does not synchronize edits to existing JSON records. Both JSON files are imported in one transaction, so an invalid record rolls back that run's inserts.
 
@@ -30,7 +32,7 @@ To create the tables without importing data:
 python -c "from app.database import init_db; init_db()"
 ```
 
-The application also creates missing tables on startup and shows an empty state if there are no posts. For an existing Milestone 1 database, this adds only the new `generated_responses` table; keep your database file. No reset or Alembic migration is needed. Table creation does not change columns in existing tables.
+The application also creates missing tables on startup and shows an empty state if there are no posts. Existing databases are upgraded in place; keep the database file. The lightweight SQLite upgrade adds curated post fields and rebuilds only the `posts` table when needed to make engagement counts nullable. It preserves post IDs, statuses, and response relationships. No reset or Alembic migration is needed.
 
 ## Project files
 
@@ -57,14 +59,17 @@ sapho-engage/
 │   └── posts.json
 ├── scripts/
 │   ├── seed_data.py
-│   └── import_influencers.py
+│   ├── import_influencers.py
+│   └── import_posts.py
 ├── research/
 │   ├── influencers.csv
-│   └── influencers_ranked_research.csv
+│   ├── influencers_ranked_research.csv
+│   └── posts.csv
 ├── tests/
 │   ├── test_workflow.py
 │   ├── test_llm_service.py
-│   └── test_influencers.py
+│   ├── test_influencers.py
+│   └── test_posts.py
 ├── .env.example
 ├── .gitignore
 ├── requirements.txt
@@ -73,10 +78,10 @@ sapho-engage/
 
 ## Data flow
 
-1. `scripts/seed_data.py` reads both JSON arrays, converts ISO 8601 dates to UTC, and inserts influencers before their posts through SQLAlchemy.
+1. `scripts/seed_data.py` keeps the fictional JSON fixtures available, while the two research importers load curated influencers and post summaries from CSV.
 2. SQLite stores `influencers` and `posts`, linked by `posts.influencer_id`. Foreign key enforcement is enabled for each connection. `Post.status` defaults to `new` when omitted.
-3. `GET /` opens a request-scoped session and selects all posts with their influencers in one query, ordered by date descending, then ID descending.
-4. FastAPI passes the results to `templates/index.html`, which extends `base.html`. Jinja escapes text, preserves post line breaks, and renders the author details, content, date, likes, comments, status, and full post URL. FastAPI serves CSS at `/static/styles.css`.
+3. `GET /` opens a request-scoped session and selects curated posts newest first. It selects demo posts only when no curated posts exist.
+4. FastAPI passes the results to `templates/index.html`. Jinja labels curated content as a research summary, renders available engagement and provenance, and links to the original public post. FastAPI serves CSS at `/static/styles.css`.
 
 The implementation uses [SQLAlchemy 2.x typed models and selects](https://docs.sqlalchemy.org/en/20/orm/quickstart.html) and [FastAPI's Jinja2 template integration](https://fastapi.tiangolo.com/advanced/templates/).
 
@@ -108,7 +113,7 @@ The prototype ranks manually researched compounding-pharmacy industry voices wit
 
 `research/influencers.csv` is the application-ready source. `research/influencers_ranked_research.csv` retains extra provenance and research notes and is not imported. The importer calculates `overall_score` itself, marks curated records as `manual_research`, and identifies records by normalized LinkedIn URL. Re-running it skips unchanged profiles and updates changed profiles without duplicating them or changing their post relationships.
 
-Candidates were manually researched from publicly available information. Activity and engagement observations are a snapshot and can change. Verified recent-post ingestion will be handled separately; the application does not scrape LinkedIn or create posts for real people.
+Candidates were manually researched from publicly available information. Activity and engagement observations are a snapshot and can change. The application does not scrape LinkedIn or create posts for real people.
 
 From inside `sapho-engage`, import the curated data with:
 
@@ -130,7 +135,35 @@ python -m unittest discover -s tests -v
 uvicorn app.main:app --reload
 ```
 
-Open http://127.0.0.1:8000/influencers and confirm exactly 10 curated profiles appear in descending score order, with names, titles, companies, component scores, notes, and LinkedIn links matching `research/influencers.csv`. Confirm sample names do not appear there. Then open http://127.0.0.1:8000/ and a post detail page to confirm the six sample posts, Gemini generation, and existing saved drafts still work.
+Open http://127.0.0.1:8000/influencers and confirm exactly 10 curated profiles appear in descending score order, with names, titles, companies, component scores, notes, and LinkedIn links matching `research/influencers.csv`. Confirm sample names do not appear there.
+
+## Curated LinkedIn Post Dataset
+
+The MVP uses manually researched information from publicly accessible LinkedIn posts. `research/posts.csv` contains concise research summaries rather than complete post text collected through automated scraping. Public availability differs by profile, so the number of researched posts varies across influencers.
+
+Import the dataset with:
+
+```bash
+python -m scripts.import_posts
+```
+
+The importer matches each post to an existing curated influencer by normalized LinkedIn profile URL. It uses the post URL for duplicate-safe upserts, preserves existing post statuses and generated-response history, and marks imported posts as `manual_research`. Blank reaction or comment counts remain unknown (`NULL`) rather than becoming a misleading zero. Re-running an unchanged import skips every existing row.
+
+The normal queue shows only curated posts once at least one has been imported. The six explicitly marked demo posts remain in SQLite for tests and fallback use.
+
+To verify the complete curated workflow:
+
+```bash
+cd /Users/minhthuynguyen/sapho-linkedin-assistant/sapho-engage
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python -m scripts.import_influencers
+python -m scripts.import_posts
+python -m unittest discover -s tests -v
+uvicorn app.main:app --reload
+```
+
+At http://127.0.0.1:8000/, confirm curated summaries appear newest first, demo posts are hidden, topics and source links are present, and missing engagement is not shown as zero. At http://127.0.0.1:8000/influencers, confirm the existing top-10 ranking remains intact. Open one curated post, generate with Gemini, edit and save the draft, then refresh and confirm it remains in history. Run `python -m scripts.import_posts` again and confirm the summary reports 29 skipped rows with no duplicates.
 
 ## Manual Gemini smoke test
 
