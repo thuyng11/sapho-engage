@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block data_notice %}{% endblock %}
+
+{% block content %}
+<section aria-labelledby="activity-heading">
+  <h2 id="activity-heading">Activity history</h2>
+  <p class="muted">Generation and manual response-workflow events · Newest first · Dates in UTC</p>
+  {% for event in events %}
+  <article class="activity-event">
+    <p><time datetime="{{ event.created_at.isoformat() }}Z">{{ event.created_at.strftime('%b %d, %Y at %H:%M') }} UTC</time></p>
+    <h3>{{ event.post.influencer.name }}</h3>
+    <p>{{ event.post.topic or event.post.content[:100] }}</p>
+    <p><strong>{{ action_labels.get(event.action, event.action | replace('_', ' ') | title) }}</strong>{% if event.response %} · Response status: {{ event.response.status }}{% endif %}</p>
+    <a href="{{ url_for('post_detail', post_id=event.post_id) }}{% if event.response_id %}?response_id={{ event.response_id }}{% endif %}">View post and response</a>
+  </article>
+  {% else %}
+  <p class="post">No activity yet. Generate a response to begin the workflow.</p>
+  {% endfor %}
+</section>
+{% endblock %}
