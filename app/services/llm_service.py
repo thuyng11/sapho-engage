@@ -107,7 +107,7 @@ def generate_response(
         with genai.Client(
             api_key=api_key,
             http_options=types.HttpOptions(
-                timeout=120_000, retry_options=types.HttpRetryOptions(max_retries=2)
+                timeout=120_000, retry_options=types.HttpRetryOptions(attempts=2)
             ),
         ) as client:
             logger.info("Calling Gemini API...")
