@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 
 import httpx
@@ -6,6 +7,8 @@ from google import genai
 from google.genai import errors, types
 
 from app.models import Post
+
+logger = logging.getLogger(__name__)
 
 GOAL_INSTRUCTIONS = {
     "Thought Leadership": "Add a useful industry perspective or observation. Prioritize insight and credibility over promotion.",
@@ -89,26 +92,51 @@ def generate_response(
 ) -> str:
     api_key = os.getenv("GEMINI_API_KEY", "").strip()
     model = os.getenv("GEMINI_MODEL", "gemini-3.7-flash").strip()
+    
+    logger.info(f"Attempting generation with model: {model}")
+    logger.info(f"API key present: {bool(api_key)}")
+    
     if not api_key or not model:
+        logger.error("Gemini configuration is missing.")
         raise GenerationError("Gemini configuration is missing.")
+    
     instructions, source = build_prompt(post, goal, tone, length, custom_instruction)
+    
     try:
+        logger.info("Creating Gemini client...")
         with genai.Client(
             api_key=api_key,
             http_options=types.HttpOptions(
                 timeout=60_000, retry_options=types.HttpRetryOptions(attempts=1)
             ),
         ) as client:
+            logger.info("Calling Gemini API...")
             response = client.models.generate_content(
                 model=model,
                 contents=source,
                 config=types.GenerateContentConfig(system_instruction=instructions),
             )
-    except (errors.APIError, httpx.TransportError) as exc:
-        raise GenerationError("Gemini generation failed.") from exc
+            logger.info(f"Gemini response received. Candidates: {len(response.candidates) if response.candidates else 0}")
+    except errors.APIError as exc:
+        logger.error(f"Gemini API error: {type(exc).__name__}: {exc}")
+        logger.error(f"Full exception: {exc}", exc_info=True)
+        raise GenerationError(f"Gemini API error: {exc}") from exc
+    except httpx.TransportError as exc:
+        logger.error(f"HTTP transport error: {exc}", exc_info=True)
+        raise GenerationError(f"HTTP error: {exc}") from exc
+    except Exception as exc:
+        logger.error(f"Unexpected error during generation: {type(exc).__name__}: {exc}", exc_info=True)
+        raise GenerationError(f"Unexpected error: {exc}") from exc
+    
     if not response.candidates or response.candidates[0].finish_reason != types.FinishReason.STOP:
+        finish_reason = response.candidates[0].finish_reason if response.candidates else "NO_CANDIDATES"
+        logger.error(f"Incomplete response. Finish reason: {finish_reason}")
         raise GenerationError("Gemini returned no complete response.")
+    
     text = response.text
     if not text or not text.strip():
+        logger.error("Gemini returned empty text")
         raise GenerationError("Gemini returned no complete response.")
+    
+    logger.info("Generation successful")
     return text
